@@ -1,0 +1,33 @@
+name: ticket-tix
+version: "3.8"
+
+services:
+  # --- 1. DATABASES ---
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: ticket-tix-postgres
+    hostname: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ticket_tix_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - ticket-tix-postgres:/var/lib/postgresql/data
+    networks:
+      - ticket-tix_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d ticket_tix_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+networks:
+  ticket-tix_net:
+    driver: bridge
+
+volumes:
+  ticket-tix-postgres:
