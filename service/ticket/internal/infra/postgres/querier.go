@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	DeleteEventImage(ctx context.Context, imageKey string) error
 	InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
 	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)

@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+const deleteEventImage = `-- name: DeleteEventImage :exec
+DELETE FROM event_images
+WHERE image_key = $1
+`
+
+func (q *Queries) DeleteEventImage(ctx context.Context, imageKey string) error {
+	_, err := q.db.ExecContext(ctx, deleteEventImage, imageKey)
+	return err
+}
+
 const insertBooking = `-- name: InsertBooking :one
 INSERT INTO bookings (ticket_id, status)
 VALUES ($1, $2)

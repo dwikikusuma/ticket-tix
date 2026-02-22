@@ -6,6 +6,7 @@ import (
 )
 
 type EventData struct {
+	ID          int32
 	Name        string
 	Description string
 	Location    string

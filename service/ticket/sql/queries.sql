@@ -22,3 +22,7 @@ VALUES ($1, $2, $3, $4)
 INSERT INTO bookings (ticket_id, status)
 VALUES ($1, $2)
     RETURNING *;
+
+-- name: DeleteEventImage :exec
+DELETE FROM event_images
+WHERE image_key = $1;

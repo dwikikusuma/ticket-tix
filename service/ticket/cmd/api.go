@@ -4,18 +4,31 @@ import (
 	"database/sql"
 	"log"
 	"ticket-tix/common/pkg/db"
+	"ticket-tix/common/pkg/storage"
 	"ticket-tix/service/ticket/internal/handler"
+	"ticket-tix/service/ticket/internal/repository"
+	"ticket-tix/service/ticket/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 const (
+	// db
 	dbHost = "localhost"
-	dbPort = 5432
+	dbPort = 5433
 	dbUser = "user"
 	dbPass = "password"
 	dbName = "ticket_tix_db"
-	port   = "50061"
+
+	// server
+	port = "50061"
+
+	// minio
+	minioEndpoint  = "localhost:9000"
+	minioAccessKey = "minioadmin"
+	minioSecretKey = "minioadmin123"
+	minioBucket    = "ticket-bucket	"
+	minioUseSSL    = false
 )
 
 func main() {
@@ -24,9 +37,13 @@ func main() {
 	ticketDB := openDBConnection()
 	defer ticketDB.Close()
 
-	r := gin.Default()
+	minioStorage := openStorageConnection()
 
-	ticketHandler := handler.NewTicketHandler()
+	ticketRepo := repository.NewTicketRepo(ticketDB)
+	ticketService := service.NewTicketService(ticketDB, minioStorage, ticketRepo)
+	ticketHandler := handler.NewTicketHandler(ticketService)
+
+	r := gin.Default()
 	ticketHandler.RegisterRoutes(r)
 
 	if err := r.Run(":" + port); err != nil {
@@ -49,10 +66,26 @@ func openDBConnection() *sql.DB {
 
 	postgresDB, err := db.Open(dbConfig)
 	if err != nil {
-		log.Println("failed to open db")
-		log.Fatalf(err.Error())
+		log.Fatalf("failed to open db: %v", err)
 	}
 	log.Println("db opened")
-
 	return postgresDB
+}
+
+func openStorageConnection() *storage.Storage {
+	log.Println("opening minio connection")
+	storageCfg := storage.StorageConfig{
+		Endpoint:        minioEndpoint,
+		AccessKey:       minioAccessKey,
+		SecretAccessKey: minioSecretKey,
+		UseSSL:          minioUseSSL,
+		BucketName:      minioBucket,
+	}
+
+	s, err := storage.NewStorage(storageCfg)
+	if err != nil {
+		log.Fatalf("failed to connect to minio: %v", err)
+	}
+	log.Println("minio connected")
+	return s
 }

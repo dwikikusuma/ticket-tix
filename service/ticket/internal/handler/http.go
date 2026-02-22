@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"ticket-tix/service/ticket/internal/model"
 	"ticket-tix/service/ticket/internal/service"
 	"time"
@@ -19,76 +21,133 @@ func NewTicketHandler(svc *service.TicketService) *TicketHandler {
 
 func (h *TicketHandler) RegisterRoutes(router gin.IRouter) {
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	router.POST("/events", h.CreateEvent)
+	router.POST("/events/:id/images", h.UploadImage)
+	router.DELETE("/events/:id/images/:imageID", h.DeleteImage)
+}
+
+type createEventRequest struct {
+	Name        string `form:"name" binding:"required"`
+	Description string `form:"description"`
+	Location    string `form:"location" binding:"required"`
+	StartTime   string `form:"start_time" binding:"required"`
+	EndTime     string `form:"end_time" binding:"required"`
 }
 
 func (h *TicketHandler) CreateEvent(c *gin.Context) {
-	if err := c.Request.ParseMultipartForm(32 << 20); err != nil { // 32MB max
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse form"})
+	var req createEventRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	startTime, err := time.Parse(time.RFC3339, c.PostForm("start_time"))
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_time, use RFC3339"})
 		return
 	}
 
-	endTime, err := time.Parse(time.RFC3339, c.PostForm("end_time"))
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_time, use RFC3339"})
 		return
 	}
 
-	form, err := c.MultipartForm()
+	files, err := constructFilesFromRequest(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse multipart form"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fileHeaders := form.File["images"]
-	if len(fileHeaders) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one image is required"})
-		return
-	}
-
-	var files []model.FileData
-	for i, header := range fileHeaders {
-		file, err := header.Open()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open image"})
-			return
-		}
-		defer file.Close()
-
-		files = append(files, model.FileData{
-			Filename:     header.Filename,
-			Size:         header.Size,
-			ContentType:  header.Header.Get("Content-Type"),
-			Reader:       file,
-			IsPrimary:    i == 0, // first image is primary
-			DisplayOrder: i,
-		})
-	}
-
-	req := model.InsertTicketRequest{
+	serviceReq := model.InsertTicketRequest{
 		Event: model.EventData{
-			Name:        c.PostForm("name"),
-			Description: c.PostForm("description"),
-			Location:    c.PostForm("location"),
+			Name:        req.Name,
+			Description: req.Description,
+			Location:    req.Location,
 			StartTime:   startTime,
 			EndTime:     endTime,
 		},
 		Files: files,
 	}
 
-	result, err := h.service.CreateEvent(c.Request.Context(), req)
+	result, err := h.service.CreateEvent(c.Request.Context(), serviceReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, result)
+}
+
+func (h *TicketHandler) UploadImage(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event_id"})
+		return
+	}
+
+	files, err := constructFilesFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.UploadImg(c.Request.Context(), int32(id), files); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "images uploaded"})
+}
+
+func (h *TicketHandler) DeleteImage(c *gin.Context) {
+	key := c.Param("imageID")
+	if key == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "imageID is required"})
+		return
+	}
+
+	if err := h.service.DeleteImg(c.Request.Context(), key); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "image deleted"})
+}
+
+func constructFilesFromRequest(c *gin.Context) ([]model.FileData, error) {
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		return nil, fmt.Errorf("failed to parse form: %w", err)
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read multipart form: %w", err)
+	}
+
+	fileHeaders := form.File["images"]
+	if len(fileHeaders) == 0 {
+		return nil, fmt.Errorf("at least one image is required")
+	}
+
+	var files []model.FileData
+	for i, header := range fileHeaders {
+		file, err := header.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open image %s: %w", header.Filename, err)
+		}
+
+		files = append(files, model.FileData{
+			Filename:     header.Filename,
+			Size:         header.Size,
+			ContentType:  header.Header.Get("Content-Type"),
+			Reader:       file,
+			IsPrimary:    i == 0,
+			DisplayOrder: i,
+		})
+	}
+
+	return files, nil
 }
