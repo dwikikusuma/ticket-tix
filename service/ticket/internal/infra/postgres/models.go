@@ -7,7 +7,16 @@ package ticketDB
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+type Booking struct {
+	ID        uuid.UUID `json:"id"`
+	TicketID  int32     `json:"ticket_id"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 type CategoryType struct {
 	Name string `json:"name"`
@@ -25,7 +34,7 @@ type Event struct {
 
 type EventCategory struct {
 	ID             int32          `json:"id"`
-	EventID        sql.NullInt32  `json:"event_id"`
+	EventID        int32          `json:"event_id"`
 	Name           string         `json:"name"`
 	CategoryType   sql.NullString `json:"category_type"`
 	Price          string         `json:"price"`
@@ -34,9 +43,18 @@ type EventCategory struct {
 	AvailableStock int32          `json:"available_stock"`
 }
 
+type EventImage struct {
+	ID           int32         `json:"id"`
+	EventID      int32         `json:"event_id"`
+	ImageKey     string        `json:"image_key"`
+	IsPrimary    sql.NullBool  `json:"is_primary"`
+	DisplayOrder sql.NullInt32 `json:"display_order"`
+	CreatedAt    sql.NullTime  `json:"created_at"`
+}
+
 type Ticket struct {
 	ID              int32          `json:"id"`
-	EventCategoryID sql.NullInt32  `json:"event_category_id"`
+	EventCategoryID int32          `json:"event_category_id"`
 	SeatNumber      sql.NullString `json:"seat_number"`
 	Status          sql.NullString `json:"status"`
 	ReservedUntil   sql.NullTime   `json:"reserved_until"`

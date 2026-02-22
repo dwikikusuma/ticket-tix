@@ -11,29 +11,50 @@ import (
 	"time"
 )
 
-const insertEvents = `-- name: InsertEvents :one
-INSERT INTO events (name, description, location, start_time, end_time, created_at)
-VALUES ($1,$2, $3, $4, $5, $6)
-RETURNING id, name, description, location, start_time, end_time, created_at
+const insertBooking = `-- name: InsertBooking :one
+INSERT INTO bookings (ticket_id, status)
+VALUES ($1, $2)
+    RETURNING id, ticket_id, status, created_at
 `
 
-type InsertEventsParams struct {
+type InsertBookingParams struct {
+	TicketID int32  `json:"ticket_id"`
+	Status   string `json:"status"`
+}
+
+func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error) {
+	row := q.db.QueryRowContext(ctx, insertBooking, arg.TicketID, arg.Status)
+	var i Booking
+	err := row.Scan(
+		&i.ID,
+		&i.TicketID,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertEvent = `-- name: InsertEvent :one
+INSERT INTO events (name, description, location, start_time, end_time)
+VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, name, description, location, start_time, end_time, created_at
+`
+
+type InsertEventParams struct {
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	Location    string         `json:"location"`
 	StartTime   time.Time      `json:"start_time"`
 	EndTime     time.Time      `json:"end_time"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
 }
 
-func (q *Queries) InsertEvents(ctx context.Context, arg InsertEventsParams) (Event, error) {
-	row := q.db.QueryRowContext(ctx, insertEvents,
+func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error) {
+	row := q.db.QueryRowContext(ctx, insertEvent,
 		arg.Name,
 		arg.Description,
 		arg.Location,
 		arg.StartTime,
 		arg.EndTime,
-		arg.CreatedAt,
 	)
 	var i Event
 	err := row.Scan(
@@ -48,19 +69,15 @@ func (q *Queries) InsertEvents(ctx context.Context, arg InsertEventsParams) (Eve
 	return i, err
 }
 
-const insertEventsCategory = `-- name: InsertEventsCategory :one
-INSERT INTO event_categories (
-    id, event_id, category_type, price,
-    book_type, total_capacity, available_stock
-) VALUES (
- $1,$2, $3, $4, $5, $6, $7
-)
-RETURNING id, event_id, name, category_type, price, book_type, total_capacity, available_stock
+const insertEventCategory = `-- name: InsertEventCategory :one
+INSERT INTO event_categories (event_id, name, category_type, price, book_type, total_capacity, available_stock)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id, event_id, name, category_type, price, book_type, total_capacity, available_stock
 `
 
-type InsertEventsCategoryParams struct {
-	ID             int32          `json:"id"`
-	EventID        sql.NullInt32  `json:"event_id"`
+type InsertEventCategoryParams struct {
+	EventID        int32          `json:"event_id"`
+	Name           string         `json:"name"`
 	CategoryType   sql.NullString `json:"category_type"`
 	Price          string         `json:"price"`
 	BookType       string         `json:"book_type"`
@@ -68,10 +85,10 @@ type InsertEventsCategoryParams struct {
 	AvailableStock int32          `json:"available_stock"`
 }
 
-func (q *Queries) InsertEventsCategory(ctx context.Context, arg InsertEventsCategoryParams) (EventCategory, error) {
-	row := q.db.QueryRowContext(ctx, insertEventsCategory,
-		arg.ID,
+func (q *Queries) InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error) {
+	row := q.db.QueryRowContext(ctx, insertEventCategory,
 		arg.EventID,
+		arg.Name,
 		arg.CategoryType,
 		arg.Price,
 		arg.BookType,
@@ -92,27 +109,57 @@ func (q *Queries) InsertEventsCategory(ctx context.Context, arg InsertEventsCate
 	return i, err
 }
 
-const insertTickets = `-- name: InsertTickets :one
-INSERT INTO tickets (event_category_id, seat_number, status, reserved_until, version)
-VALUES ($1,$2, $3, $4, $5)
-RETURNING id, event_category_id, seat_number, status, reserved_until, version
+const insertEventImage = `-- name: InsertEventImage :one
+INSERT INTO event_images (event_id, image_key, is_primary, display_order)
+VALUES ($1, $2, $3, $4)
+    RETURNING id, event_id, image_key, is_primary, display_order, created_at
 `
 
-type InsertTicketsParams struct {
-	EventCategoryID sql.NullInt32  `json:"event_category_id"`
+type InsertEventImageParams struct {
+	EventID      int32         `json:"event_id"`
+	ImageKey     string        `json:"image_key"`
+	IsPrimary    sql.NullBool  `json:"is_primary"`
+	DisplayOrder sql.NullInt32 `json:"display_order"`
+}
+
+func (q *Queries) InsertEventImage(ctx context.Context, arg InsertEventImageParams) (EventImage, error) {
+	row := q.db.QueryRowContext(ctx, insertEventImage,
+		arg.EventID,
+		arg.ImageKey,
+		arg.IsPrimary,
+		arg.DisplayOrder,
+	)
+	var i EventImage
+	err := row.Scan(
+		&i.ID,
+		&i.EventID,
+		&i.ImageKey,
+		&i.IsPrimary,
+		&i.DisplayOrder,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertTicket = `-- name: InsertTicket :one
+INSERT INTO tickets (event_category_id, seat_number, status, reserved_until)
+VALUES ($1, $2, $3, $4)
+    RETURNING id, event_category_id, seat_number, status, reserved_until, version
+`
+
+type InsertTicketParams struct {
+	EventCategoryID int32          `json:"event_category_id"`
 	SeatNumber      sql.NullString `json:"seat_number"`
 	Status          sql.NullString `json:"status"`
 	ReservedUntil   sql.NullTime   `json:"reserved_until"`
-	Version         sql.NullInt32  `json:"version"`
 }
 
-func (q *Queries) InsertTickets(ctx context.Context, arg InsertTicketsParams) (Ticket, error) {
-	row := q.db.QueryRowContext(ctx, insertTickets,
+func (q *Queries) InsertTicket(ctx context.Context, arg InsertTicketParams) (Ticket, error) {
+	row := q.db.QueryRowContext(ctx, insertTicket,
 		arg.EventCategoryID,
 		arg.SeatNumber,
 		arg.Status,
 		arg.ReservedUntil,
-		arg.Version,
 	)
 	var i Ticket
 	err := row.Scan(

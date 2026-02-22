@@ -9,9 +9,11 @@ import (
 )
 
 type Querier interface {
-	InsertEvents(ctx context.Context, arg InsertEventsParams) (Event, error)
-	InsertEventsCategory(ctx context.Context, arg InsertEventsCategoryParams) (EventCategory, error)
-	InsertTickets(ctx context.Context, arg InsertTicketsParams) (Ticket, error)
+	InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error)
+	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
+	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)
+	InsertEventImage(ctx context.Context, arg InsertEventImageParams) (EventImage, error)
+	InsertTicket(ctx context.Context, arg InsertTicketParams) (Ticket, error)
 }
 
 var _ Querier = (*Queries)(nil)
