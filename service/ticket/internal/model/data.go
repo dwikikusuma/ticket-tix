@@ -11,17 +11,18 @@ type EventData struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	CreatedAt   time.Time
 }
 
 type FileData struct {
-	Filename    string
-	Size        int64
-	ContentType string
-	Reader      io.Reader
+	Filename     string
+	Size         int64
+	ContentType  string
+	Reader       io.Reader
+	IsPrimary    bool
+	DisplayOrder int
 }
 
 type InsertTicketRequest struct {
 	Event EventData
-	Files FileData
+	Files []FileData
 }

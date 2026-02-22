@@ -99,3 +99,12 @@ func (s *Storage) GetPresignedURL(ctx context.Context, key string, expiry time.D
 
 	return presignedURL.String(), nil
 }
+
+func (s *Storage) Delete(ctx context.Context, key string) error {
+	err := s.client.RemoveObject(ctx, s.bucketName, key, minio.RemoveObjectOptions{})
+	if err != nil {
+		log.Printf("Failed to delete object from bucket %s with key %s: %v\n", s.bucketName, key, err)
+		return err
+	}
+	return nil
+}
