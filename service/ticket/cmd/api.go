@@ -27,7 +27,7 @@ const (
 	minioEndpoint  = "localhost:9000"
 	minioAccessKey = "minioadmin"
 	minioSecretKey = "minioadmin123"
-	minioBucket    = "ticket-bucket	"
+	minioBucket    = "ticket-bucket"
 	minioUseSSL    = false
 )
 
@@ -44,6 +44,19 @@ func main() {
 	ticketHandler := handler.NewTicketHandler(ticketService)
 
 	r := gin.Default()
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
 	ticketHandler.RegisterRoutes(r)
 
 	if err := r.Run(":" + port); err != nil {
