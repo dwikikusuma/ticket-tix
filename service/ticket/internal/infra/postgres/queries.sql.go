@@ -21,6 +21,99 @@ func (q *Queries) DeleteEventImage(ctx context.Context, imageKey string) error {
 	return err
 }
 
+const getEventCategories = `-- name: GetEventCategories :many
+SELECT id, event_id, name, category_type, price, book_type, total_capacity, available_stock FROM event_categories
+WHERE event_id = $1
+`
+
+func (q *Queries) GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error) {
+	rows, err := q.db.QueryContext(ctx, getEventCategories, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventCategory
+	for rows.Next() {
+		var i EventCategory
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Name,
+			&i.CategoryType,
+			&i.Price,
+			&i.BookType,
+			&i.TotalCapacity,
+			&i.AvailableStock,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEventDetails = `-- name: GetEventDetails :one
+SELECT id, name, description, location, start_time, end_time, created_at FROM events
+WHERE id = $1
+`
+
+func (q *Queries) GetEventDetails(ctx context.Context, id int32) (Event, error) {
+	row := q.db.QueryRowContext(ctx, getEventDetails, id)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Location,
+		&i.StartTime,
+		&i.EndTime,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEventImages = `-- name: GetEventImages :many
+SELECT id, event_id, image_key, is_primary, display_order, created_at FROM event_images
+WHERE event_id = $1
+ORDER BY display_order
+`
+
+func (q *Queries) GetEventImages(ctx context.Context, eventID int32) ([]EventImage, error) {
+	rows, err := q.db.QueryContext(ctx, getEventImages, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventImage
+	for rows.Next() {
+		var i EventImage
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.ImageKey,
+			&i.IsPrimary,
+			&i.DisplayOrder,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertBooking = `-- name: InsertBooking :one
 INSERT INTO bookings (ticket_id, status)
 VALUES ($1, $2)

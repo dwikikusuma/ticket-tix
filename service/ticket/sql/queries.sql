@@ -26,3 +26,16 @@ VALUES ($1, $2)
 -- name: DeleteEventImage :exec
 DELETE FROM event_images
 WHERE image_key = $1;
+
+-- name: GetEventDetails :one
+SELECT * FROM events
+WHERE id = $1;
+
+-- name: GetEventCategories :many
+SELECT * FROM event_categories
+WHERE event_id = $1;
+
+-- name: GetEventImages :many
+SELECT * FROM event_images
+WHERE event_id = $1
+ORDER BY display_order;

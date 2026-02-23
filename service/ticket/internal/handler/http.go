@@ -26,6 +26,7 @@ func (h *TicketHandler) RegisterRoutes(router gin.IRouter) {
 	router.POST("/events", h.CreateEvent)
 	router.POST("/events/:id/images", h.UploadImage)
 	router.DELETE("/events/:id/images/:imageID", h.DeleteImage)
+	router.GET("/event/:id", h.GetEvent)
 }
 
 type createEventRequest struct {
@@ -115,6 +116,22 @@ func (h *TicketHandler) DeleteImage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "image deleted"})
+}
+
+func (h *TicketHandler) GetEvent(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event_id"})
+		return
+	}
+
+	detail, err := h.service.GetEventDetail(c.Request.Context(), int32(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, detail)
 }
 
 func constructFilesFromRequest(c *gin.Context) ([]model.FileData, error) {

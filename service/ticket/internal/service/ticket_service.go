@@ -111,6 +111,29 @@ func (s *TicketService) UploadImg(ctx context.Context, eventID int32, files []mo
 	return nil
 }
 
+func (s *TicketService) GetEventDetail(ctx context.Context, id int32) (model.EventDetailsData, error) {
+	event, err := s.repo.GetEventByID(ctx, id)
+	if err != nil {
+		return model.EventDetailsData{}, fmt.Errorf("get event by id: %w", err)
+	}
+
+	categories, err := s.repo.GetEventCategory(ctx, id)
+	if err != nil {
+		return model.EventDetailsData{}, fmt.Errorf("get event category: %w", err)
+	}
+
+	images, err := s.repo.GetEventImages(ctx, id)
+	if err != nil {
+		return model.EventDetailsData{}, fmt.Errorf("get event images: %w", err)
+	}
+
+	return model.EventDetailsData{
+		EventData:  event,
+		Categories: categories,
+		Images:     images,
+	}, nil
+}
+
 func (s *TicketService) insertFiles(ctx context.Context, eventID int32, files []model.FileData) ([]string, error) {
 	filesKey := make([]string, 0, len(files))
 	for _, file := range files {

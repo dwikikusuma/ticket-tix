@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
 	ticketDB "ticket-tix/service/ticket/internal/infra/postgres"
 	"ticket-tix/service/ticket/internal/model"
 )
@@ -72,6 +74,54 @@ func (r *ticketRepo) DeleteEventImage(ctx context.Context, key string) error {
 	return nil
 }
 
+func (r *ticketRepo) GetEventByID(ctx context.Context, id int32) (model.EventData, error) {
+	event, err := r.db.GetEventDetails(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.EventData{}, fmt.Errorf("event not found")
+		}
+		return model.EventData{}, fmt.Errorf("failed get event by id: %w", err)
+	}
+	return toModel(event), nil
+}
+
+func (r *ticketRepo) GetEventCategory(ctx context.Context, eventID int32) ([]model.EventCategoryData, error) {
+	evenCat, err := r.db.GetEventCategories(ctx, eventID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("event category not found")
+		}
+		return nil, fmt.Errorf("failed get event category: %w", err)
+	}
+
+	var res []model.EventCategoryData
+	for _, ec := range evenCat {
+		res = append(res, toModelEventCategory(ec))
+	}
+	return res, nil
+}
+
+func (r *ticketRepo) GetEventImages(ctx context.Context, eventID int32) ([]model.EventImageData, error) {
+	images, err := r.db.GetEventImages(ctx, eventID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("event images not found")
+		}
+		return nil, fmt.Errorf("failed get event images: %w", err)
+	}
+
+	var res []model.EventImageData
+	for _, img := range images {
+		res = append(res, model.EventImageData{
+			EventID:      img.EventID,
+			Key:          img.ImageKey,
+			IsPrimary:    img.IsPrimary.Bool,
+			DisplayOrder: int(img.DisplayOrder.Int32),
+		})
+	}
+	return res, nil
+}
+
 func toModel(e ticketDB.Event) model.EventData {
 	return model.EventData{
 		ID:          e.ID,
@@ -80,5 +130,18 @@ func toModel(e ticketDB.Event) model.EventData {
 		Location:    e.Location,
 		StartTime:   e.StartTime,
 		EndTime:     e.EndTime,
+	}
+}
+
+func toModelEventCategory(ec ticketDB.EventCategory) model.EventCategoryData {
+	price, _ := strconv.ParseFloat(ec.Price, 64)
+	return model.EventCategoryData{
+		EventID:           ec.EventID,
+		CategoryID:        ec.ID,
+		CategoryType:      ec.CategoryType.String,
+		Price:             price,
+		BookType:          ec.BookType,
+		TotalCapacity:     ec.TotalCapacity,
+		AvailableCapacity: ec.AvailableStock,
 	}
 }

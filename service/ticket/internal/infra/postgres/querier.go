@@ -10,6 +10,9 @@ import (
 
 type Querier interface {
 	DeleteEventImage(ctx context.Context, imageKey string) error
+	GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error)
+	GetEventDetails(ctx context.Context, id int32) (Event, error)
+	GetEventImages(ctx context.Context, eventID int32) ([]EventImage, error)
 	InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
 	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)

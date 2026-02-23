@@ -27,3 +27,26 @@ type InsertTicketRequest struct {
 	Event EventData
 	Files []FileData
 }
+
+type EventCategoryData struct {
+	EventID           int32
+	CategoryID        int32
+	CategoryType      string
+	Price             float64
+	BookType          string
+	TotalCapacity     int32
+	AvailableCapacity int32
+}
+
+type EventImageData struct {
+	EventID      int32
+	Key          string
+	IsPrimary    bool
+	DisplayOrder int
+}
+
+type EventDetailsData struct {
+	EventData
+	Images     []EventImageData
+	Categories []EventCategoryData
+}
