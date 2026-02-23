@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]Event, error)
 	DeleteEventImage(ctx context.Context, imageKey string) error
 	GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error)
 	GetEventDetails(ctx context.Context, id int32) (Event, error)

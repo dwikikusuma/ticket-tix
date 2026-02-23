@@ -39,3 +39,19 @@ WHERE event_id = $1;
 SELECT * FROM event_images
 WHERE event_id = $1
 ORDER BY display_order;
+
+-- name: BrowseEvents :many
+SELECT id, name, description, location, start_time, end_time, created_at
+FROM events
+WHERE
+    (sqlc.arg(event_name)::text = '' OR name ILIKE '%' || sqlc.arg(event_name) || '%') AND
+    (sqlc.arg(location)::text = '' OR location ILIKE '%' || sqlc.arg(location) || '%') AND
+    (sqlc.arg(start_date)::timestamp = '0001-01-01 00:00:00' OR start_time >= sqlc.arg(start_date)) AND
+    (sqlc.arg(end_date)::timestamp = '0001-01-01 00:00:00' OR start_time <= sqlc.arg(end_date)) AND
+    (
+        sqlc.arg(cursor_time)::timestamp = '0001-01-01 00:00:00' OR
+        start_time > sqlc.arg(cursor_time)::timestamp OR
+        (start_time = sqlc.arg(cursor_time)::timestamp AND id > sqlc.arg(cursor_id)::int)
+        )
+ORDER BY start_time ASC, id ASC
+    LIMIT sqlc.arg(page_size);

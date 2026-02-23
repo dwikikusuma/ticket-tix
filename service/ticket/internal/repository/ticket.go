@@ -8,6 +8,7 @@ import (
 	"strconv"
 	ticketDB "ticket-tix/service/ticket/internal/infra/postgres"
 	"ticket-tix/service/ticket/internal/model"
+	"time"
 )
 
 type ticketRepo struct {
@@ -120,6 +121,42 @@ func (r *ticketRepo) GetEventImages(ctx context.Context, eventID int32) ([]model
 		})
 	}
 	return res, nil
+}
+func (r *ticketRepo) BrowseEvents(ctx context.Context, filter model.BrowseFilter) ([]model.EventData, error) {
+	var cursorTime time.Time
+	var cursorID int32
+
+	if filter.Cursor != nil {
+		cursorTime = filter.Cursor.StartTime
+		cursorID = filter.Cursor.ID
+	}
+
+	rows, err := r.db.BrowseEvents(ctx, ticketDB.BrowseEventsParams{
+		EventName:  filter.EventName,
+		Location:   filter.Location,
+		StartDate:  filter.StartDate,
+		EndDate:    filter.EndDate,
+		CursorTime: cursorTime,
+		CursorID:   cursorID,
+		PageSize:   int32(filter.Limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("browse events: %w", err)
+	}
+
+	var events []model.EventData
+	for _, row := range rows {
+		events = append(events, model.EventData{
+			ID:          row.ID,
+			Name:        row.Name,
+			Description: row.Description.String,
+			Location:    row.Location,
+			StartTime:   row.StartTime,
+			EndTime:     row.EndTime,
+		})
+	}
+
+	return events, nil
 }
 
 func toModel(e ticketDB.Event) model.EventData {

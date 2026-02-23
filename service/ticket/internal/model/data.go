@@ -50,3 +50,23 @@ type EventDetailsData struct {
 	Images     []EventImageData
 	Categories []EventCategoryData
 }
+
+type BrowseCursor struct {
+	StartTime time.Time `json:"start_time"`
+	ID        int32     `json:"id"`
+}
+
+type BrowseFilter struct {
+	EventName string
+	Location  string
+	StartDate time.Time
+	EndDate   time.Time
+	Cursor    *BrowseCursor
+	Limit     int
+}
+
+type BrowseResult struct {
+	Events     []EventData `json:"events"`
+	NextCursor *string     `json:"next_cursor"`
+	HasMore    bool        `json:"has_more"`
+}

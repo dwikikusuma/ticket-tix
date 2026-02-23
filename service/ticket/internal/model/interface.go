@@ -13,6 +13,7 @@ type TicketRepo interface {
 	GetEventByID(ctx context.Context, id int32) (EventData, error)
 	GetEventCategory(ctx context.Context, eventID int32) ([]EventCategoryData, error)
 	GetEventImages(ctx context.Context, eventID int32) ([]EventImageData, error)
+	BrowseEvents(ctx context.Context, filter BrowseFilter) ([]EventData, error)
 }
 
 type TicketService interface {
@@ -20,6 +21,7 @@ type TicketService interface {
 	DeleteImg(ctx context.Context, key string) error
 	UploadImg(ctx context.Context, eventID int32, file FileData) error
 	GetEventDetail(ctx context.Context, id int32) (EventDetailsData, error)
+	BrowseEvents(ctx context.Context, filter BrowseFilter) (BrowseResult, error)
 }
 
 type ImageKeyData struct {

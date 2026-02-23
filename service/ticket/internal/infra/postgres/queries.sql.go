@@ -11,6 +11,72 @@ import (
 	"time"
 )
 
+const browseEvents = `-- name: BrowseEvents :many
+SELECT id, name, description, location, start_time, end_time, created_at
+FROM events
+WHERE
+    ($1::text = '' OR name ILIKE '%' || $1 || '%') AND
+    ($2::text = '' OR location ILIKE '%' || $2 || '%') AND
+    ($3::timestamp = '0001-01-01 00:00:00' OR start_time >= $3) AND
+    ($4::timestamp = '0001-01-01 00:00:00' OR start_time <= $4) AND
+    (
+        $5::timestamp = '0001-01-01 00:00:00' OR
+        start_time > $5::timestamp OR
+        (start_time = $5::timestamp AND id > $6::int)
+        )
+ORDER BY start_time ASC, id ASC
+    LIMIT $7
+`
+
+type BrowseEventsParams struct {
+	EventName  string    `json:"event_name"`
+	Location   string    `json:"location"`
+	StartDate  time.Time `json:"start_date"`
+	EndDate    time.Time `json:"end_date"`
+	CursorTime time.Time `json:"cursor_time"`
+	CursorID   int32     `json:"cursor_id"`
+	PageSize   int32     `json:"page_size"`
+}
+
+func (q *Queries) BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]Event, error) {
+	rows, err := q.db.QueryContext(ctx, browseEvents,
+		arg.EventName,
+		arg.Location,
+		arg.StartDate,
+		arg.EndDate,
+		arg.CursorTime,
+		arg.CursorID,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Location,
+			&i.StartTime,
+			&i.EndTime,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteEventImage = `-- name: DeleteEventImage :exec
 DELETE FROM event_images
 WHERE image_key = $1

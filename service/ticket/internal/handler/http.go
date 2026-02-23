@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -27,6 +29,7 @@ func (h *TicketHandler) RegisterRoutes(router gin.IRouter) {
 	router.POST("/events/:id/images", h.UploadImage)
 	router.DELETE("/events/:id/images/:imageID", h.DeleteImage)
 	router.GET("/event/:id", h.GetEvent)
+	router.GET("/events", h.BrowseEvents)
 }
 
 type createEventRequest struct {
@@ -132,6 +135,75 @@ func (h *TicketHandler) GetEvent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+type browseEventsRequest struct {
+	EventName string `form:"event_name"`
+	Location  string `form:"location"`
+	StartDate string `form:"start_date"`
+	EndDate   string `form:"end_date"`
+	Cursor    string `form:"cursor"`
+	Limit     int    `form:"limit,default=20" binding:"min=1,max=100"`
+}
+
+func (h *TicketHandler) BrowseEvents(c *gin.Context) {
+	var req browseEventsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	filter, err := toBrowseFilter(req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := h.service.BrowseEvents(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func toBrowseFilter(req browseEventsRequest) (model.BrowseFilter, error) {
+	filter := model.BrowseFilter{
+		EventName: req.EventName,
+		Location:  req.Location,
+		Limit:     req.Limit,
+	}
+
+	if req.StartDate != "" {
+		t, err := time.Parse(time.RFC3339, req.StartDate)
+		if err != nil {
+			return model.BrowseFilter{}, fmt.Errorf("invalid start_date, use RFC3339")
+		}
+		filter.StartDate = t
+	}
+
+	if req.EndDate != "" {
+		t, err := time.Parse(time.RFC3339, req.EndDate)
+		if err != nil {
+			return model.BrowseFilter{}, fmt.Errorf("invalid end_date, use RFC3339")
+		}
+		filter.EndDate = t
+	}
+
+	if req.Cursor != "" {
+		decoded, err := base64.StdEncoding.DecodeString(req.Cursor)
+		if err != nil {
+			return model.BrowseFilter{}, fmt.Errorf("invalid cursor")
+		}
+		var cursor model.BrowseCursor
+		if err := json.Unmarshal(decoded, &cursor); err != nil {
+			return model.BrowseFilter{}, fmt.Errorf("invalid cursor")
+		}
+		filter.Cursor = &cursor
+	}
+
+	return filter, nil
 }
 
 func constructFilesFromRequest(c *gin.Context) ([]model.FileData, error) {

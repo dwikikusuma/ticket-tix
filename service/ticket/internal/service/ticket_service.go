@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"ticket-tix/common/pkg/storage"
@@ -131,6 +133,38 @@ func (s *TicketService) GetEventDetail(ctx context.Context, id int32) (model.Eve
 		EventData:  event,
 		Categories: categories,
 		Images:     images,
+	}, nil
+}
+
+func (s *TicketService) BrowseEvents(ctx context.Context, filter model.BrowseFilter) (model.BrowseResult, error) {
+	filter.Limit += 1
+	events, err := s.repo.BrowseEvents(ctx, filter)
+	if err != nil {
+		return model.BrowseResult{}, fmt.Errorf("browse events: %w", err)
+	}
+	filter.Limit -= 1
+
+	hasMore := len(events) > filter.Limit
+	if hasMore {
+		events = events[:filter.Limit]
+	}
+
+	var nextCursor *string
+	if hasMore && len(events) > 0 {
+		last := events[len(events)-1]
+		cursor := model.BrowseCursor{
+			StartTime: last.StartTime,
+			ID:        last.ID,
+		}
+		b, _ := json.Marshal(cursor)
+		encoded := base64.StdEncoding.EncodeToString(b)
+		nextCursor = &encoded
+	}
+
+	return model.BrowseResult{
+		Events:     events,
+		NextCursor: nextCursor,
+		HasMore:    hasMore,
 	}, nil
 }
 
