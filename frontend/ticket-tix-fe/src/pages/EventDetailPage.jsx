@@ -46,8 +46,8 @@ export function EventDetailPage({ eventId, onBack }) {
 
   const images = event.images || [];
   const cats   = event.categories || [];
-  const img    = images[activeImg]?.image_url || null;
-
+  const img    = images[activeImg]?.key || null;
+  
   return (
     <div className="detail-page anim-fade-in">
       <BackBtn onClick={onBack} />
@@ -70,7 +70,7 @@ export function EventDetailPage({ eventId, onBack }) {
                   onClick={() => setActive(i)}
                   className={`detail-page__thumb${i === activeImg ? " detail-page__thumb--active" : ""}`}
                 >
-                  <img src={im.image_url} alt="" />
+                  <img src={im.key} alt="" />
                 </button>
               ))}
             </div>

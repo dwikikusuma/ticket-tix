@@ -12,19 +12,20 @@ import (
 )
 
 const browseEvents = `-- name: BrowseEvents :many
-SELECT id, name, description, location, start_time, end_time, created_at
-FROM events
+SELECT e.id, e.name, e.description, e.location, e.start_time, e.end_time, e.created_at, ei.image_key
+FROM events e
+JOIN event_images ei ON e.id = ei.event_id AND ei.is_primary = true
 WHERE
-    ($1::text = '' OR name ILIKE '%' || $1 || '%') AND
-    ($2::text = '' OR location ILIKE '%' || $2 || '%') AND
-    ($3::timestamp = '0001-01-01 00:00:00' OR start_time >= $3) AND
-    ($4::timestamp = '0001-01-01 00:00:00' OR start_time <= $4) AND
+    ($1::text = '' OR e.name ILIKE '%' || $1 || '%') AND
+    ($2::text = '' OR e.location ILIKE '%' || $2 || '%') AND
+    ($3::timestamp = '0001-01-01 00:00:00' OR e.start_time >= $3) AND
+    ($4::timestamp = '0001-01-01 00:00:00' OR e.start_time <= $4) AND
     (
         $5::timestamp = '0001-01-01 00:00:00' OR
-        start_time > $5::timestamp OR
-        (start_time = $5::timestamp AND id > $6::int)
+        e.start_time > $5::timestamp OR
+        (e.start_time = $5::timestamp AND e.id > $6::int)
         )
-ORDER BY start_time ASC, id ASC
+ORDER BY e.start_time ASC, e.id ASC
     LIMIT $7
 `
 
@@ -38,7 +39,18 @@ type BrowseEventsParams struct {
 	PageSize   int32     `json:"page_size"`
 }
 
-func (q *Queries) BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]Event, error) {
+type BrowseEventsRow struct {
+	ID          int32          `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Location    string         `json:"location"`
+	StartTime   time.Time      `json:"start_time"`
+	EndTime     time.Time      `json:"end_time"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	ImageKey    string         `json:"image_key"`
+}
+
+func (q *Queries) BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]BrowseEventsRow, error) {
 	rows, err := q.db.QueryContext(ctx, browseEvents,
 		arg.EventName,
 		arg.Location,
@@ -52,9 +64,9 @@ func (q *Queries) BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]E
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Event
+	var items []BrowseEventsRow
 	for rows.Next() {
-		var i Event
+		var i BrowseEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -63,6 +75,7 @@ func (q *Queries) BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]E
 			&i.StartTime,
 			&i.EndTime,
 			&i.CreatedAt,
+			&i.ImageKey,
 		); err != nil {
 			return nil, err
 		}

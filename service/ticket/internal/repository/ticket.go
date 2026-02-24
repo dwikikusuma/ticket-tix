@@ -153,6 +153,7 @@ func (r *ticketRepo) BrowseEvents(ctx context.Context, filter model.BrowseFilter
 			Location:    row.Location,
 			StartTime:   row.StartTime,
 			EndTime:     row.EndTime,
+			ImageURL:    row.ImageKey,
 		})
 	}
 

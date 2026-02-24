@@ -93,6 +93,7 @@ func openStorageConnection() *storage.Storage {
 		SecretAccessKey: minioSecretKey,
 		UseSSL:          minioUseSSL,
 		BucketName:      minioBucket,
+		IsPrivate:       false,
 	}
 
 	s, err := storage.NewStorage(storageCfg)

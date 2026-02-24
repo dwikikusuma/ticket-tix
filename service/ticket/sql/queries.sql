@@ -41,17 +41,18 @@ WHERE event_id = $1
 ORDER BY display_order;
 
 -- name: BrowseEvents :many
-SELECT id, name, description, location, start_time, end_time, created_at
-FROM events
+SELECT e.id, e.name, e.description, e.location, e.start_time, e.end_time, e.created_at, ei.image_key
+FROM events e
+JOIN event_images ei ON e.id = ei.event_id AND ei.is_primary = true
 WHERE
-    (sqlc.arg(event_name)::text = '' OR name ILIKE '%' || sqlc.arg(event_name) || '%') AND
-    (sqlc.arg(location)::text = '' OR location ILIKE '%' || sqlc.arg(location) || '%') AND
-    (sqlc.arg(start_date)::timestamp = '0001-01-01 00:00:00' OR start_time >= sqlc.arg(start_date)) AND
-    (sqlc.arg(end_date)::timestamp = '0001-01-01 00:00:00' OR start_time <= sqlc.arg(end_date)) AND
+    (sqlc.arg(event_name)::text = '' OR e.name ILIKE '%' || sqlc.arg(event_name) || '%') AND
+    (sqlc.arg(location)::text = '' OR e.location ILIKE '%' || sqlc.arg(location) || '%') AND
+    (sqlc.arg(start_date)::timestamp = '0001-01-01 00:00:00' OR e.start_time >= sqlc.arg(start_date)) AND
+    (sqlc.arg(end_date)::timestamp = '0001-01-01 00:00:00' OR e.start_time <= sqlc.arg(end_date)) AND
     (
         sqlc.arg(cursor_time)::timestamp = '0001-01-01 00:00:00' OR
-        start_time > sqlc.arg(cursor_time)::timestamp OR
-        (start_time = sqlc.arg(cursor_time)::timestamp AND id > sqlc.arg(cursor_id)::int)
+        e.start_time > sqlc.arg(cursor_time)::timestamp OR
+        (e.start_time = sqlc.arg(cursor_time)::timestamp AND e.id > sqlc.arg(cursor_id)::int)
         )
-ORDER BY start_time ASC, id ASC
+ORDER BY e.start_time ASC, e.id ASC
     LIMIT sqlc.arg(page_size);

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/url"
@@ -17,6 +18,7 @@ type StorageConfig struct {
 	SecretAccessKey string
 	UseSSL          bool
 	BucketName      string
+	IsPrivate       bool
 }
 
 type Storage struct {
@@ -45,18 +47,37 @@ func NewStorage(cfg StorageConfig) (*Storage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err = s.ensureBucket(ctx); err != nil {
+	if err = s.ensureBucket(ctx, cfg.IsPrivate); err != nil {
 		return nil, err
 	}
 
 	return s, nil
 }
 
-func (s *Storage) ensureBucket(ctx context.Context) error {
+func (s *Storage) ensureBucket(ctx context.Context, isPrivate bool) error {
 	exists, err := s.client.BucketExists(ctx, s.bucketName)
 	if err != nil {
 		log.Println("Failed to check if bucket exists: ", err)
 		return err
+	}
+
+	if !isPrivate {
+		policy := fmt.Sprintf(`{
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Action": ["s3:GetObject"],
+					"Effect": "Allow",
+					"Principal": {"AWS": ["*"]},
+					"Resource": ["arn:aws:s3:::%s/*"]
+				}
+			]
+		}`, s.bucketName)
+		err = s.client.SetBucketPolicy(ctx, s.bucketName, policy)
+		if err != nil {
+			log.Printf("Failed to set public bucket policy for %s: %v\n", s.bucketName, err)
+			return err
+		}
 	}
 
 	if exists {

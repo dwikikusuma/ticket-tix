@@ -129,10 +129,17 @@ func (s *TicketService) GetEventDetail(ctx context.Context, id int32) (model.Eve
 		return model.EventDetailsData{}, fmt.Errorf("get event images: %w", err)
 	}
 
+	var imagesWithUrl []model.EventImageData
+	for _, img := range images {
+		url := s.storage.GetImageURL(img.Key)
+		img.Key = url
+		imagesWithUrl = append(imagesWithUrl, img)
+	}
+
 	return model.EventDetailsData{
 		EventData:  event,
 		Categories: categories,
-		Images:     images,
+		Images:     imagesWithUrl,
 	}, nil
 }
 
@@ -159,6 +166,11 @@ func (s *TicketService) BrowseEvents(ctx context.Context, filter model.BrowseFil
 		b, _ := json.Marshal(cursor)
 		encoded := base64.StdEncoding.EncodeToString(b)
 		nextCursor = &encoded
+	}
+
+	for i := range events {
+		imgUrl := s.storage.GetImageURL(events[i].ImageURL)
+		events[i].ImageURL = imgUrl
 	}
 
 	return model.BrowseResult{

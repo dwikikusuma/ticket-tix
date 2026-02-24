@@ -1,7 +1,7 @@
 import fmt from "../utils/fmt";
 
 export function EventCard({ event, onClick, style: s = {} }) {
-  const img = event.images?.[0]?.image_url || null;
+  const img = event.image_url || null;
 
   return (
     <article
