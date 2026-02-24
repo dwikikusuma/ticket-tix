@@ -1,0 +1,1 @@
+ALTER TABLE bookings ADD COLUMN user_id INT NOT NULL default 0;
