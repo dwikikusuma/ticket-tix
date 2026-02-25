@@ -13,4 +13,4 @@ migrate-down:
 
 migrate-force:
 	docker run --rm -v $(MIGRATIONS_PATH):/migrations --network host migrate/migrate \
-	   -path=/migrations/ -database "$(DB_URL)" force 1
+	   -path=/migrations/ -database "$(DB_URL)" force $(version)

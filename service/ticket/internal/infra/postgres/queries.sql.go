@@ -196,12 +196,12 @@ func (q *Queries) GetEventImages(ctx context.Context, eventID int32) ([]EventIma
 const insertBooking = `-- name: InsertBooking :one
 INSERT INTO bookings (ticket_id, status)
 VALUES ($1, $2)
-    RETURNING id, ticket_id, status, created_at
+    RETURNING id, ticket_id, status, created_at, user_id, event_id, event_category_id
 `
 
 type InsertBookingParams struct {
-	TicketID int32  `json:"ticket_id"`
-	Status   string `json:"status"`
+	TicketID sql.NullInt32 `json:"ticket_id"`
+	Status   string        `json:"status"`
 }
 
 func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error) {
@@ -212,6 +212,9 @@ func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (B
 		&i.TicketID,
 		&i.Status,
 		&i.CreatedAt,
+		&i.UserID,
+		&i.EventID,
+		&i.EventCategoryID,
 	)
 	return i, err
 }
