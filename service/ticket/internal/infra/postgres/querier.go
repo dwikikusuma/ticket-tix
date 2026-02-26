@@ -19,6 +19,7 @@ type Querier interface {
 	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)
 	InsertEventImage(ctx context.Context, arg InsertEventImageParams) (EventImage, error)
 	InsertTicket(ctx context.Context, arg InsertTicketParams) (Ticket, error)
+	UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) (int32, error)
 }
 
 var _ Querier = (*Queries)(nil)

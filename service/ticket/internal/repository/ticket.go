@@ -160,6 +160,21 @@ func (r *ticketRepo) BrowseEvents(ctx context.Context, filter model.BrowseFilter
 	return events, nil
 }
 
+func (r *ticketRepo) UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error) {
+	bookTime := time.Now().Add(15 * time.Minute)
+	ticketID, err := r.db.UpdateTicketStatus(ctx, ticketDB.UpdateTicketStatusParams{
+		Status:          sql.NullString{String: status, Valid: true},
+		SeatNumber:      sql.NullString{String: seatNum, Valid: true},
+		EventCategoryID: eventID,
+		ReservedUntil:   sql.NullTime{Time: bookTime, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("update ticket status: %w", err)
+	}
+	return ticketID, nil
+
+}
+
 func toModel(e ticketDB.Event) model.EventData {
 	return model.EventData{
 		ID:          e.ID,

@@ -19,7 +19,7 @@ type TicketService struct {
 	db      *sql.DB
 }
 
-func NewTicketService(db *sql.DB, storage *storage.Storage, repo model.TicketRepo) *TicketService {
+func NewTicketService(db *sql.DB, storage *storage.Storage, repo model.TicketRepo) model.TicketService {
 	return &TicketService{db: db, storage: storage, repo: repo}
 }
 
@@ -178,6 +178,13 @@ func (s *TicketService) BrowseEvents(ctx context.Context, filter model.BrowseFil
 		NextCursor: nextCursor,
 		HasMore:    hasMore,
 	}, nil
+}
+
+func (s *TicketService) UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error) {
+	if status != "Sold" && status != "AVAILABLE" {
+		return 0, fmt.Errorf("invalid status")
+	}
+	return s.repo.UpdateTicketStatus(ctx, status, seatNum, eventID)
 }
 
 func (s *TicketService) insertFiles(ctx context.Context, eventID int32, files []model.FileData) ([]string, error) {

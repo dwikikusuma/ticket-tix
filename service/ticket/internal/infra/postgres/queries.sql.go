@@ -357,3 +357,29 @@ func (q *Queries) InsertTicket(ctx context.Context, arg InsertTicketParams) (Tic
 	)
 	return i, err
 }
+
+const updateTicketStatus = `-- name: UpdateTicketStatus :one
+UPDATE tickets
+SET status = $1, reserved_until = $2
+WHERE event_category_id = $3 AND seat_number = $4
+RETURNING id
+`
+
+type UpdateTicketStatusParams struct {
+	Status          sql.NullString `json:"status"`
+	ReservedUntil   sql.NullTime   `json:"reserved_until"`
+	EventCategoryID int32          `json:"event_category_id"`
+	SeatNumber      sql.NullString `json:"seat_number"`
+}
+
+func (q *Queries) UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, updateTicketStatus,
+		arg.Status,
+		arg.ReservedUntil,
+		arg.EventCategoryID,
+		arg.SeatNumber,
+	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}

@@ -14,14 +14,16 @@ type TicketRepo interface {
 	GetEventCategory(ctx context.Context, eventID int32) ([]EventCategoryData, error)
 	GetEventImages(ctx context.Context, eventID int32) ([]EventImageData, error)
 	BrowseEvents(ctx context.Context, filter BrowseFilter) ([]EventData, error)
+	UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error)
 }
 
 type TicketService interface {
 	CreateEvent(ctx context.Context, req InsertTicketRequest) (EventData, error)
 	DeleteImg(ctx context.Context, key string) error
-	UploadImg(ctx context.Context, eventID int32, file FileData) error
+	UploadImg(ctx context.Context, eventID int32, files []FileData) error
 	GetEventDetail(ctx context.Context, id int32) (EventDetailsData, error)
 	BrowseEvents(ctx context.Context, filter BrowseFilter) (BrowseResult, error)
+	UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error)
 }
 
 type ImageKeyData struct {

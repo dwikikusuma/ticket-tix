@@ -56,3 +56,9 @@ WHERE
         )
 ORDER BY e.start_time ASC, e.id ASC
     LIMIT sqlc.arg(page_size);
+
+-- name: UpdateTicketStatus :one
+UPDATE tickets
+SET status = $1, reserved_until = $2
+WHERE event_category_id = $3 AND seat_number = $4
+RETURNING id;

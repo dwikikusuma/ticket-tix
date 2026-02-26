@@ -7,17 +7,16 @@ import (
 	"net/http"
 	"strconv"
 	"ticket-tix/service/ticket/internal/model"
-	"ticket-tix/service/ticket/internal/service"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type TicketHandler struct {
-	service *service.TicketService
+	service model.TicketService
 }
 
-func NewTicketHandler(svc *service.TicketService) *TicketHandler {
+func NewTicketHandler(svc model.TicketService) *TicketHandler {
 	return &TicketHandler{service: svc}
 }
 
