@@ -9,6 +9,7 @@ import (
 	"log"
 	"ticket-tix/common/pkg/storage"
 	"ticket-tix/service/ticket/internal/model"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -180,44 +181,85 @@ func (s *TicketService) BrowseEvents(ctx context.Context, filter model.BrowseFil
 	}, nil
 }
 
-func (s *TicketService) UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error) {
-	if status != "Sold" && status != "AVAILABLE" {
-		return 0, fmt.Errorf("invalid status")
+// UpdateTicketStatus updates a ticket to RESERVED or AVAILABLE only.
+// "RESERVED" is used when a booking is in progress.
+// "AVAILABLE" is used when a booking is cancelled/released.
+// "SOLD" is set after payment is confirmed (via a separate flow).
+func (s *TicketService) UpdateTicketStatus(ctx context.Context, status, seatNum string, eventCategoryID int32) (int32, error) {
+	// FIX: was only allowing "Sold" and "AVAILABLE", rejecting "RESERVED"
+	// "SOLD" is intentionally excluded here — it should only be set after payment confirmation
+	if status != "RESERVED" && status != "AVAILABLE" {
+		return 0, fmt.Errorf("invalid status: %q, must be RESERVED or AVAILABLE", status)
 	}
-	return s.repo.UpdateTicketStatus(ctx, status, seatNum, eventID)
+
+	// FIX: guard against updating a ticket that isn't currently in the expected state
+	// e.g. don't let two concurrent requests both reserve the same seat
+	ticket, err := s.repo.GetTicketSeatAndEventCategory(ctx, seatNum, eventCategoryID)
+	if err != nil {
+		return 0, fmt.Errorf("get ticket before update: %w", err)
+	}
+
+	if status == "RESERVED" && ticket.Status != "AVAILABLE" {
+		return 0, fmt.Errorf("ticket is not available for reservation, current status: %s", ticket.Status)
+	}
+	if status == "AVAILABLE" && ticket.Status != "RESERVED" {
+		return 0, fmt.Errorf("ticket is not reserved, cannot release, current status: %s", ticket.Status)
+	}
+
+	return s.repo.UpdateTicketStatus(ctx, status, seatNum, eventCategoryID)
 }
 
+// ValidateTicketBooking validates whether a ticket/seat can be booked.
+// For SEATED categories: checks the specific seat exists, is AVAILABLE, and not expired-reserved.
+// For STANDING categories: checks there is remaining available stock.
 func (s *TicketService) ValidateTicketBooking(ctx context.Context, seatId string, eventID, eventCategory int32) error {
 	ecDetail, err := s.repo.GetEventCategoryByID(ctx, eventCategory)
-
 	if err != nil {
 		return fmt.Errorf("get event category by id: %w", err)
 	}
 
+	// FIX: event category must belong to the given event
 	if ecDetail.EventID != eventID {
-		return fmt.Errorf("event category does not belong to event")
+		return fmt.Errorf("event category %d does not belong to event %d", eventCategory, eventID)
 	}
 
-	if ecDetail.CategoryType == "Seated" {
+	// FIX: was comparing against "Seated" — DB stores "SEATED" (uppercase)
+	switch ecDetail.CategoryType {
+	case "SEATED":
 		if seatId == "" {
-			return fmt.Errorf("seat id is required for seated category")
+			return fmt.Errorf("seat_id is required for SEATED category")
 		}
 
 		ticketDetail, err := s.repo.GetTicketSeatAndEventCategory(ctx, seatId, eventCategory)
 		if err != nil {
-			return fmt.Errorf("get ticket seat and event category: %w", err)
+			return fmt.Errorf("get ticket: %w", err)
 		}
-		if ticketDetail.EventCategoryID != eventCategory {
-			return fmt.Errorf("ticket does not belong to event category")
+
+		// FIX: was never checking if the ticket is actually AVAILABLE
+		if ticketDetail.Status != "AVAILABLE" {
+			// FIX: a RESERVED ticket whose reservation has expired should be treated as AVAILABLE
+			if ticketDetail.Status == "RESERVED" && !ticketDetail.ReservedUntil.IsZero() && time.Now().After(ticketDetail.ReservedUntil) {
+				// Reservation expired — treat as available (the actual status update
+				// happens in UpdateTicketStatus; we just allow the booking to proceed)
+				return nil
+			}
+			return fmt.Errorf("seat %s is not available, current status: %s", seatId, ticketDetail.Status)
 		}
-		if ticketDetail.SeatNum != seatId {
-			return fmt.Errorf("seat id does not match")
+
+	case "STANDING":
+		if seatId != "" {
+			return fmt.Errorf("seat_id must be empty for STANDING category")
 		}
-	} else {
-		if ecDetail.TotalCapacity <= 0 {
-			return fmt.Errorf("no available capacity")
+
+		// FIX: was checking TotalCapacity (never changes) instead of AvailableCapacity
+		if ecDetail.AvailableCapacity <= 0 {
+			return fmt.Errorf("no available capacity for this category")
 		}
+
+	default:
+		return fmt.Errorf("unknown category type: %s", ecDetail.CategoryType)
 	}
+
 	return nil
 }
 

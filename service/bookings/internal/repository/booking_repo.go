@@ -25,10 +25,14 @@ func (r *bookingRepo) CreateBooking(ctx context.Context, bookingDetail model.Cre
 		ticketIDNullInt = sql.NullInt32{Valid: false}
 	}
 
+	// FIX: EventID was missing from CreateBookingParams despite being NOT NULL in the DB schema.
+	// This would cause a runtime DB error on every standing-ticket booking and any
+	// seated booking where EventID wasn't threaded through correctly.
 	createdBooking, err := r.db.CreateBooking(ctx, bookingDB.CreateBookingParams{
 		TicketID:        ticketIDNullInt,
 		UserID:          bookingDetail.UserID,
 		EventCategoryID: bookingDetail.EventType,
+		EventID:         bookingDetail.EventID,
 		Status:          bookingDetail.Status,
 	})
 	if err != nil {
@@ -39,8 +43,8 @@ func (r *bookingRepo) CreateBooking(ctx context.Context, bookingDetail model.Cre
 		ID:        createdBooking.ID.String(),
 		TicketID:  createdBooking.TicketID.Int32,
 		UserID:    createdBooking.UserID,
+		EventID:   createdBooking.EventID,
 		EventType: createdBooking.EventCategoryID,
 		Status:    createdBooking.Status,
-		EventID:   createdBooking.EventID,
 	}, nil
 }
