@@ -6,9 +6,15 @@ import (
 	"log"
 	"ticket-tix/common/pkg/db"
 	"ticket-tix/service/bookings/internal/handler"
+	"ticket-tix/service/bookings/internal/repository"
+	"ticket-tix/service/bookings/internal/service"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	ticketRPC "ticket-tix/common/gen/ticket/v1"
 )
 
 const (
@@ -21,13 +27,24 @@ const (
 
 	// server
 	port = "50062"
+
+	// rpc
+	ticketRPCAddr = "localhost:40061"
 )
 
 func main() {
 	bookDB := openDBConnection()
 	defer bookDB.Close()
 
-	httpHandler := handler.NewHandler()
+	ticketConn, err := grpc.NewClient(ticketRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect to ticket service: %v", err)
+	}
+
+	ticketClient := ticketRPC.NewTicketServiceClient(ticketConn)
+	repo := repository.NewBookingRepo(bookDB)
+	ticketService := service.NewBookingService(repo, ticketClient)
+	httpHandler := handler.NewHandler(ticketService)
 
 	r := gin.Default()
 	httpHandler.RegisterRoutes(r)

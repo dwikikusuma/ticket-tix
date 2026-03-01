@@ -133,6 +133,110 @@ func (x *UpdateTicketStatusResponse) GetStatus() string {
 	return ""
 }
 
+type ValidateTicketRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SeatId        string                 `protobuf:"bytes,1,opt,name=seat_id,json=seatId,proto3" json:"seat_id,omitempty"`
+	EventId       int32                  `protobuf:"varint,2,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EventCategory int32                  `protobuf:"varint,3,opt,name=event_category,json=eventCategory,proto3" json:"event_category,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateTicketRequest) Reset() {
+	*x = ValidateTicketRequest{}
+	mi := &file_ticket_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateTicketRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateTicketRequest) ProtoMessage() {}
+
+func (x *ValidateTicketRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateTicketRequest.ProtoReflect.Descriptor instead.
+func (*ValidateTicketRequest) Descriptor() ([]byte, []int) {
+	return file_ticket_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ValidateTicketRequest) GetSeatId() string {
+	if x != nil {
+		return x.SeatId
+	}
+	return ""
+}
+
+func (x *ValidateTicketRequest) GetEventId() int32 {
+	if x != nil {
+		return x.EventId
+	}
+	return 0
+}
+
+func (x *ValidateTicketRequest) GetEventCategory() int32 {
+	if x != nil {
+		return x.EventCategory
+	}
+	return 0
+}
+
+type ValidateTicketResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsValid       bool                   `protobuf:"varint,1,opt,name=is_valid,json=isValid,proto3" json:"is_valid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateTicketResponse) Reset() {
+	*x = ValidateTicketResponse{}
+	mi := &file_ticket_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateTicketResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateTicketResponse) ProtoMessage() {}
+
+func (x *ValidateTicketResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateTicketResponse.ProtoReflect.Descriptor instead.
+func (*ValidateTicketResponse) Descriptor() ([]byte, []int) {
+	return file_ticket_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ValidateTicketResponse) GetIsValid() bool {
+	if x != nil {
+		return x.IsValid
+	}
+	return false
+}
+
 var File_ticket_proto protoreflect.FileDescriptor
 
 const file_ticket_proto_rawDesc = "" +
@@ -144,9 +248,16 @@ const file_ticket_proto_rawDesc = "" +
 	"\x06status\x18\x03 \x01(\tR\x06status\"Q\n" +
 	"\x1aUpdateTicketStatusResponse\x12\x1b\n" +
 	"\tticket_id\x18\x01 \x01(\x05R\bticketId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status2l\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"r\n" +
+	"\x15ValidateTicketRequest\x12\x17\n" +
+	"\aseat_id\x18\x01 \x01(\tR\x06seatId\x12\x19\n" +
+	"\bevent_id\x18\x02 \x01(\x05R\aeventId\x12%\n" +
+	"\x0eevent_category\x18\x03 \x01(\x05R\reventCategory\"3\n" +
+	"\x16ValidateTicketResponse\x12\x19\n" +
+	"\bis_valid\x18\x01 \x01(\bR\aisValid2\xbd\x01\n" +
 	"\rTicketService\x12[\n" +
-	"\x12UpdateTicketStatus\x12!.ticket.UpdateTicketStatusRequest\x1a\".ticket.UpdateTicketStatusResponseBAZ?github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1b\x06proto3"
+	"\x12UpdateTicketStatus\x12!.ticket.UpdateTicketStatusRequest\x1a\".ticket.UpdateTicketStatusResponse\x12O\n" +
+	"\x0eValidateTicket\x12\x1d.ticket.ValidateTicketRequest\x1a\x1e.ticket.ValidateTicketResponseBAZ?github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1b\x06proto3"
 
 var (
 	file_ticket_proto_rawDescOnce sync.Once
@@ -160,16 +271,20 @@ func file_ticket_proto_rawDescGZIP() []byte {
 	return file_ticket_proto_rawDescData
 }
 
-var file_ticket_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_ticket_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_ticket_proto_goTypes = []any{
 	(*UpdateTicketStatusRequest)(nil),  // 0: ticket.UpdateTicketStatusRequest
 	(*UpdateTicketStatusResponse)(nil), // 1: ticket.UpdateTicketStatusResponse
+	(*ValidateTicketRequest)(nil),      // 2: ticket.ValidateTicketRequest
+	(*ValidateTicketResponse)(nil),     // 3: ticket.ValidateTicketResponse
 }
 var file_ticket_proto_depIdxs = []int32{
 	0, // 0: ticket.TicketService.UpdateTicketStatus:input_type -> ticket.UpdateTicketStatusRequest
-	1, // 1: ticket.TicketService.UpdateTicketStatus:output_type -> ticket.UpdateTicketStatusResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: ticket.TicketService.ValidateTicket:input_type -> ticket.ValidateTicketRequest
+	1, // 2: ticket.TicketService.UpdateTicketStatus:output_type -> ticket.UpdateTicketStatusResponse
+	3, // 3: ticket.TicketService.ValidateTicket:output_type -> ticket.ValidateTicketResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -186,7 +301,7 @@ func file_ticket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ticket_proto_rawDesc), len(file_ticket_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

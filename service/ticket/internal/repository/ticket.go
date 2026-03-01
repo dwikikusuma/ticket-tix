@@ -175,6 +175,36 @@ func (r *ticketRepo) UpdateTicketStatus(ctx context.Context, status, seatNum str
 
 }
 
+func (r *ticketRepo) GetEventCategoryByID(ctx context.Context, eventCatID int32) (model.EventCategoryData, error) {
+	ec, err := r.db.GetEventCategoryById(ctx, eventCatID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.EventCategoryData{}, fmt.Errorf("event category not found")
+		}
+		return model.EventCategoryData{}, fmt.Errorf("failed get event category by id: %w", err)
+	}
+	return toModelEventCategory(ec), nil
+}
+
+func (r *ticketRepo) GetTicketSeatAndEventCategory(ctx context.Context, seatNum string, eventCatID int32) (model.TicketData, error) {
+	ticketDetail, err := r.db.GetTicketSeatAndEventCat(ctx, ticketDB.GetTicketSeatAndEventCatParams{
+		SeatNumber:      sql.NullString{String: seatNum, Valid: true},
+		EventCategoryID: eventCatID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.TicketData{}, fmt.Errorf("ticket not found")
+		}
+		return model.TicketData{}, fmt.Errorf("failed get ticket seat and event category: %w", err)
+	}
+	return model.TicketData{
+		ID:              ticketDetail.ID,
+		EventCategoryID: ticketDetail.EventCategoryID,
+		SeatNum:         ticketDetail.SeatNumber.String,
+		Status:          ticketDetail.Status.String,
+		ReservedUntil:   ticketDetail.ReservedUntil.Time,
+	}, nil
+}
 func toModel(e ticketDB.Event) model.EventData {
 	return model.EventData{
 		ID:          e.ID,

@@ -187,6 +187,40 @@ func (s *TicketService) UpdateTicketStatus(ctx context.Context, status, seatNum 
 	return s.repo.UpdateTicketStatus(ctx, status, seatNum, eventID)
 }
 
+func (s *TicketService) ValidateTicketBooking(ctx context.Context, seatId string, eventID, eventCategory int32) error {
+	ecDetail, err := s.repo.GetEventCategoryByID(ctx, eventCategory)
+
+	if err != nil {
+		return fmt.Errorf("get event category by id: %w", err)
+	}
+
+	if ecDetail.EventID != eventID {
+		return fmt.Errorf("event category does not belong to event")
+	}
+
+	if ecDetail.CategoryType == "Seated" {
+		if seatId == "" {
+			return fmt.Errorf("seat id is required for seated category")
+		}
+
+		ticketDetail, err := s.repo.GetTicketSeatAndEventCategory(ctx, seatId, eventCategory)
+		if err != nil {
+			return fmt.Errorf("get ticket seat and event category: %w", err)
+		}
+		if ticketDetail.EventCategoryID != eventCategory {
+			return fmt.Errorf("ticket does not belong to event category")
+		}
+		if ticketDetail.SeatNum != seatId {
+			return fmt.Errorf("seat id does not match")
+		}
+	} else {
+		if ecDetail.TotalCapacity <= 0 {
+			return fmt.Errorf("no available capacity")
+		}
+	}
+	return nil
+}
+
 func (s *TicketService) insertFiles(ctx context.Context, eventID int32, files []model.FileData) ([]string, error) {
 	filesKey := make([]string, 0, len(files))
 	for _, file := range files {

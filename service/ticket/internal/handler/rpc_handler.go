@@ -28,3 +28,12 @@ func (h *RPCHandler) UpdateTicketStatus(ctx context.Context, req *ticketRPC.Upda
 		Status:   req.Status,
 	}, nil
 }
+
+func (h *RPCHandler) ValidateTicket(ctx context.Context, req *ticketRPC.ValidateTicketRequest) (*ticketRPC.ValidateTicketResponse, error) {
+	if err := h.svc.ValidateTicketBooking(ctx, req.SeatId, req.EventId, req.EventCategory); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to validate ticket booking: %v", err)
+	}
+	return &ticketRPC.ValidateTicketResponse{
+		IsValid: true,
+	}, nil
+}

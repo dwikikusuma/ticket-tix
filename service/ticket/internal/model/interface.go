@@ -15,6 +15,8 @@ type TicketRepo interface {
 	GetEventImages(ctx context.Context, eventID int32) ([]EventImageData, error)
 	BrowseEvents(ctx context.Context, filter BrowseFilter) ([]EventData, error)
 	UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error)
+	GetEventCategoryByID(ctx context.Context, eventCatID int32) (EventCategoryData, error)
+	GetTicketSeatAndEventCategory(ctx context.Context, seatNum string, eventCatID int32) (TicketData, error)
 }
 
 type TicketService interface {
@@ -24,6 +26,7 @@ type TicketService interface {
 	GetEventDetail(ctx context.Context, id int32) (EventDetailsData, error)
 	BrowseEvents(ctx context.Context, filter BrowseFilter) (BrowseResult, error)
 	UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error)
+	ValidateTicketBooking(ctx context.Context, seatId string, eventID, eventCategory int32) error
 }
 
 type ImageKeyData struct {

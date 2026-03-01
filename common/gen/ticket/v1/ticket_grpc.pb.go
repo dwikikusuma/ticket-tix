@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	TicketService_UpdateTicketStatus_FullMethodName = "/ticket.TicketService/UpdateTicketStatus"
+	TicketService_ValidateTicket_FullMethodName     = "/ticket.TicketService/ValidateTicket"
 )
 
 // TicketServiceClient is the client API for TicketService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TicketServiceClient interface {
 	UpdateTicketStatus(ctx context.Context, in *UpdateTicketStatusRequest, opts ...grpc.CallOption) (*UpdateTicketStatusResponse, error)
+	ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error)
 }
 
 type ticketServiceClient struct {
@@ -47,11 +49,22 @@ func (c *ticketServiceClient) UpdateTicketStatus(ctx context.Context, in *Update
 	return out, nil
 }
 
+func (c *ticketServiceClient) ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_ValidateTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TicketServiceServer is the server API for TicketService service.
 // All implementations must embed UnimplementedTicketServiceServer
 // for forward compatibility.
 type TicketServiceServer interface {
 	UpdateTicketStatus(context.Context, *UpdateTicketStatusRequest) (*UpdateTicketStatusResponse, error)
+	ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error)
 	mustEmbedUnimplementedTicketServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedTicketServiceServer struct{}
 
 func (UnimplementedTicketServiceServer) UpdateTicketStatus(context.Context, *UpdateTicketStatusRequest) (*UpdateTicketStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateTicketStatus not implemented")
+}
+func (UnimplementedTicketServiceServer) ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateTicket not implemented")
 }
 func (UnimplementedTicketServiceServer) mustEmbedUnimplementedTicketServiceServer() {}
 func (UnimplementedTicketServiceServer) testEmbeddedByValue()                       {}
@@ -104,6 +120,24 @@ func _TicketService_UpdateTicketStatus_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TicketService_ValidateTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServiceServer).ValidateTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketService_ValidateTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServiceServer).ValidateTicket(ctx, req.(*ValidateTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TicketService_ServiceDesc is the grpc.ServiceDesc for TicketService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var TicketService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateTicketStatus",
 			Handler:    _TicketService_UpdateTicketStatus_Handler,
+		},
+		{
+			MethodName: "ValidateTicket",
+			Handler:    _TicketService_ValidateTicket_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

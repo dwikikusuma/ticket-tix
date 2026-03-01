@@ -3,6 +3,11 @@ syntax = "proto3";
 package ticket;
 option go_package = "github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1";
 
+service TicketService {
+  rpc UpdateTicketStatus (UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
+  rpc ValidateTicket (ValidateTicketRequest) returns (ValidateTicketResponse);
+}
+
 message UpdateTicketStatusRequest {
   string seat_id = 1;
   int32 event_category = 2;
@@ -14,6 +19,12 @@ message UpdateTicketStatusResponse {
   string status = 2;
 }
 
-service TicketService {
-  rpc UpdateTicketStatus (UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
+message ValidateTicketRequest {
+  string seat_id = 1;
+  int32 event_id = 2;
+  int32 event_category = 3;
+}
+
+message ValidateTicketResponse {
+  bool is_valid = 1;
 }

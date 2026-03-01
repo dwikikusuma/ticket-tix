@@ -12,8 +12,10 @@ type Querier interface {
 	BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]BrowseEventsRow, error)
 	DeleteEventImage(ctx context.Context, imageKey string) error
 	GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error)
+	GetEventCategoryById(ctx context.Context, id int32) (EventCategory, error)
 	GetEventDetails(ctx context.Context, id int32) (Event, error)
 	GetEventImages(ctx context.Context, eventID int32) ([]EventImage, error)
+	GetTicketSeatAndEventCat(ctx context.Context, arg GetTicketSeatAndEventCatParams) (Ticket, error)
 	InsertBooking(ctx context.Context, arg InsertBookingParams) (Booking, error)
 	InsertEvent(ctx context.Context, arg InsertEventParams) (Event, error)
 	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)

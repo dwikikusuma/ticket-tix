@@ -71,3 +71,11 @@ type BrowseResult struct {
 	NextCursor *string     `json:"next_cursor"`
 	HasMore    bool        `json:"has_more"`
 }
+
+type TicketData struct {
+	ID              int32     `json:"id"`
+	EventCategoryID int32     `json:"event_category_id"`
+	SeatNum         string    `json:"seat_num"`
+	Status          string    `json:"status"`
+	ReservedUntil   time.Time `json:"reserved_until"`
+}

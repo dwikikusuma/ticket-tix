@@ -35,6 +35,10 @@ WHERE id = $1;
 SELECT * FROM event_categories
 WHERE event_id = $1;
 
+-- name: GetEventCategoryById :one
+SELECT * FROM event_categories
+WHERE id = $1;
+
 -- name: GetEventImages :many
 SELECT * FROM event_images
 WHERE event_id = $1
@@ -62,3 +66,17 @@ UPDATE tickets
 SET status = $1, reserved_until = $2
 WHERE event_category_id = $3 AND seat_number = $4
 RETURNING id;
+
+-- name: GetTicketSeatAndEventCat :one
+SELECT * FROM tickets
+WHERE event_category_id = $1 AND seat_number = $2
+LIMIT 1;
+
+-- -- name: GetEventCategoryByEventIdAndSeat :one
+-- SELECT
+--     ec.name, ec.category_type, ec.price, ec.book_type,
+--     ec.available_stock, ec.total_capacity
+-- FROM event_categories ec
+-- LEFT JOIN tickets t ON ec.id = t.event_category_id
+-- WHERE t.seat_number = $1 AND ec.event_id = $2
+-- LIMIT 1;

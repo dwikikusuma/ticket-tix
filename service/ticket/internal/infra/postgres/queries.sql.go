@@ -137,6 +137,27 @@ func (q *Queries) GetEventCategories(ctx context.Context, eventID int32) ([]Even
 	return items, nil
 }
 
+const getEventCategoryById = `-- name: GetEventCategoryById :one
+SELECT id, event_id, name, category_type, price, book_type, total_capacity, available_stock FROM event_categories
+WHERE id = $1
+`
+
+func (q *Queries) GetEventCategoryById(ctx context.Context, id int32) (EventCategory, error) {
+	row := q.db.QueryRowContext(ctx, getEventCategoryById, id)
+	var i EventCategory
+	err := row.Scan(
+		&i.ID,
+		&i.EventID,
+		&i.Name,
+		&i.CategoryType,
+		&i.Price,
+		&i.BookType,
+		&i.TotalCapacity,
+		&i.AvailableStock,
+	)
+	return i, err
+}
+
 const getEventDetails = `-- name: GetEventDetails :one
 SELECT id, name, description, location, start_time, end_time, created_at FROM events
 WHERE id = $1
@@ -191,6 +212,31 @@ func (q *Queries) GetEventImages(ctx context.Context, eventID int32) ([]EventIma
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTicketSeatAndEventCat = `-- name: GetTicketSeatAndEventCat :one
+SELECT id, event_category_id, seat_number, status, reserved_until, version FROM tickets
+WHERE event_category_id = $1 AND seat_number = $2
+LIMIT 1
+`
+
+type GetTicketSeatAndEventCatParams struct {
+	EventCategoryID int32          `json:"event_category_id"`
+	SeatNumber      sql.NullString `json:"seat_number"`
+}
+
+func (q *Queries) GetTicketSeatAndEventCat(ctx context.Context, arg GetTicketSeatAndEventCatParams) (Ticket, error) {
+	row := q.db.QueryRowContext(ctx, getTicketSeatAndEventCat, arg.EventCategoryID, arg.SeatNumber)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.EventCategoryID,
+		&i.SeatNumber,
+		&i.Status,
+		&i.ReservedUntil,
+		&i.Version,
+	)
+	return i, err
 }
 
 const insertBooking = `-- name: InsertBooking :one
