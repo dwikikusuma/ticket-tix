@@ -1,3 +1,4 @@
+// service/bookings/internal/service/booking_service.go
 package service
 
 import (
@@ -13,79 +14,106 @@ type bookingService struct {
 }
 
 func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient) model.BookingService {
-	return &bookingService{
-		repo:      repo,
-		ticketSVC: ticketSvc,
-	}
+	return &bookingService{repo: repo, ticketSVC: ticketSvc}
 }
 
-func (s *bookingService) CreateBooking(ctx context.Context, eventId, eventCat int32, seatID string) error {
-	// Step 1: Validate the ticket/seat is bookable
-	isValid, err := s.ticketSVC.ValidateTicket(ctx, &ticketRPC.ValidateTicketRequest{
+func (s *bookingService) CreateBooking(ctx context.Context, userID int32, eventID, eventCat int32, seatID, bookType, categoryType string) error {
+	// Route based on WHAT TYPE OF BOOKING this is.
+	// Your old code only checked seatID != "" which is wrong —
+	// FLEXIBLE also sends empty seatID but needs completely different handling.
+	switch categoryType {
+	case "STANDING":
+		return s.bookStanding(ctx, userID, eventID, eventCat)
+	case "SEATED":
+		switch bookType {
+		case "FIXED":
+			return s.bookSeatedFixed(ctx, userID, eventID, eventCat, seatID)
+		case "FLEXIBLE":
+			return s.bookSeatedFlexible(ctx, userID, eventID, eventCat)
+		}
+	}
+	return fmt.Errorf("unknown category_type/book_type combination: %s/%s", categoryType, bookType)
+}
+
+// SEATED + FIXED: client picks a specific seat
+func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, eventCat int32, seatID string) error {
+	// Step 1: validate the seat exists and is AVAILABLE
+	// (ticket-service checks status, event ownership, etc.)
+	_, err := s.ticketSVC.ValidateTicket(ctx, &ticketRPC.ValidateTicketRequest{
 		SeatId:        seatID,
-		EventId:       eventId,
+		EventId:       eventID,
 		EventCategory: eventCat,
 	})
-
-	// FIX: original code did `if err != nil || !isValid.GetIsValid() { return err }`
-	// which silently returns nil when err != nil (swallowed error).
 	if err != nil {
 		return fmt.Errorf("validate ticket: %w", err)
 	}
-	if !isValid.GetIsValid() {
-		// This branch shouldn't normally be hit because the RPC returns an error
-		// when invalid, but guard it explicitly to be safe.
-		return fmt.Errorf("ticket is not valid for booking")
+
+	// Step 2: reserve the seat — AVAILABLE → RESERVED
+	// "RESERVED" means "held while user pays", not "permanently booked"
+	reserved, err := s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
+		SeatId:        seatID,
+		EventCategory: eventCat,
+		Status:        "RESERVED",
+	})
+	if err != nil {
+		return fmt.Errorf("reserve ticket: %w", err)
 	}
 
-	// Step 2: For SEATED tickets, reserve the specific seat via RPC.
-	// For STANDING tickets seatID is empty — no seat reservation needed,
-	// but available_stock decrement must happen (see NOTE below).
-	var ticketID int32
-	if seatID != "" {
-		// FIX: was passing "Booked" which is rejected by ticket service.
-		// Correct status at this stage is "RESERVED" (held during checkout).
-		// "SOLD" should only be set after payment is confirmed.
-		bookedTicket, err := s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
-			SeatId:        seatID,
-			EventCategory: eventCat,
-			Status:        "RESERVED",
-		})
-		if err != nil {
-			return fmt.Errorf("reserve ticket: %w", err)
-		}
-		ticketID = bookedTicket.GetTicketId()
-	}
-
-	// NOTE: For STANDING tickets, available_stock is not decremented here.
-	// This needs a dedicated RPC (e.g. DecrementStock) or the ValidateTicket
-	// RPC should handle it atomically (validate + decrement in one DB tx).
-	// Without this, concurrent standing ticket bookings will oversell.
-
-	// Step 3: Persist the booking record
-	// FIX: original repo call was missing EventID, causing a NOT NULL DB error.
+	// Step 3: save the booking record in our DB
 	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
-		EventID:   eventId,
+		EventID:   eventID,
 		EventType: eventCat,
-		TicketID:  ticketID,
-		UserID:    1, // TODO: extract from auth context
+		TicketID:  reserved.GetTicketId(),
+		UserID:    userID, // ← no longer hardcoded
 		Status:    "PENDING",
 	})
 	if err != nil {
-		// If DB write fails after reserving the seat, attempt to roll back the reservation.
-		// This is best-effort — a background job should also expire stale RESERVED tickets.
-		if seatID != "" {
-			if _, releaseErr := s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
-				SeatId:        seatID,
-				EventCategory: eventCat,
-				Status:        "AVAILABLE",
-			}); releaseErr != nil {
-				// Log but don't mask the original error; the reserved_until expiry will clean this up
-				_ = releaseErr
-			}
-		}
-		return fmt.Errorf("create booking record: %w", err)
+		// Something went wrong saving — release the seat we just reserved.
+		// This is "best-effort compensation" — if this also fails, the expiry job
+		// will clean it up in 15 minutes. That's fine for now.
+		s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
+			SeatId:        seatID,
+			EventCategory: eventCat,
+			Status:        "AVAILABLE",
+		})
+		return fmt.Errorf("create booking: %w", err)
+	}
+	return nil
+}
+
+// SEATED + FLEXIBLE: system picks a seat (you'll implement this in TIX-003)
+func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID, eventCat int32) error {
+	// Not yet implemented — needs ReserveAvailableSeat RPC (TIX-003)
+	// You can return an error for now so nothing breaks silently
+	return fmt.Errorf("FLEXIBLE booking not yet implemented: see TIX-003")
+}
+
+// STANDING: no seat, just check there's capacity
+func (s *bookingService) bookStanding(ctx context.Context, userID, eventID, eventCat int32) error {
+	// Step 1: validate capacity exists (stock check)
+	_, err := s.ticketSVC.ValidateTicket(ctx, &ticketRPC.ValidateTicketRequest{
+		SeatId:        "", // empty — no seat for standing
+		EventId:       eventID,
+		EventCategory: eventCat,
+	})
+	if err != nil {
+		return fmt.Errorf("validate standing: %w", err)
 	}
 
+	// Step 2: save booking — no ticketID for standing
+	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
+		EventID:   eventID,
+		EventType: eventCat,
+		TicketID:  0, // null — standing tickets have no individual seat row
+		UserID:    userID,
+		Status:    "CONFIRMED", // standing goes straight to confirmed, no payment gate
+	})
+	if err != nil {
+		return fmt.Errorf("create standing booking: %w", err)
+	}
+
+	// NOTE: stock decrement missing here — this is BUG-14, fixed in TIX-004.
+	// Right now two concurrent STANDING bookings can both succeed even if stock=1.
+	// That's your next ticket after this baseline works.
 	return nil
 }

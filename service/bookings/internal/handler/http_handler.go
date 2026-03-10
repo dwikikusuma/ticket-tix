@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"net/http"
 	"ticket-tix/service/bookings/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -26,18 +25,27 @@ func (h *Handler) RegisterRoutes(r gin.IRouter) {
 }
 
 func (h *Handler) CreateBooking(c *gin.Context) {
-	ctx := c.Request.Context()
 	var req model.BookingRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request"})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
-	if bookErr := h.service.CreateBooking(ctx, req.EventID, req.EventCat, req.SeatID); bookErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": bookErr.Error()})
+	// For now, hardcode userID = 1 here (TIX-015 adds JWT extraction)
+	userID := int32(1)
+
+	if err := h.service.CreateBooking(
+		c.Request.Context(),
+		userID,
+		req.EventID,
+		req.EventCat,
+		req.SeatID,
+		req.BookType,
+		req.CategoryType,
+	); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Booking created successfully"})
+	c.JSON(201, gin.H{"message": "booking created"})
 }

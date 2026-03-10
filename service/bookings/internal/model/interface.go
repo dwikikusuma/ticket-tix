@@ -7,7 +7,7 @@ type BookingRepo interface {
 }
 
 type BookingService interface {
-	CreateBooking(ctx context.Context, eventId, eventCat int32, seatID string) error
+	CreateBooking(ctx context.Context, userID int32, eventID, eventCat int32, seatID, bookType, categoryType string) error
 }
 
 type CreateBooking struct {
@@ -19,10 +19,10 @@ type CreateBooking struct {
 	Status    string
 }
 
-type (
-	BookingRequest struct {
-		EventID  int32  `json:"event_id" binding:"required"`
-		EventCat int32  `json:"event_cat" binding:"required"`
-		SeatID   string `json:"seat_id"`
-	}
-)
+type BookingRequest struct {
+	EventID      int32  `json:"event_id"      binding:"required"`
+	EventCat     int32  `json:"event_cat"     binding:"required"`
+	SeatID       string `json:"seat_id"`                          // empty for FLEXIBLE and STANDING
+	BookType     string `json:"book_type"     binding:"required"` // "FIXED" or "FLEXIBLE"
+	CategoryType string `json:"category_type" binding:"required"` // "SEATED" or "STANDING"
+}
