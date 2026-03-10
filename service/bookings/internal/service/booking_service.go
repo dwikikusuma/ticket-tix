@@ -81,11 +81,30 @@ func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, e
 	return nil
 }
 
-// SEATED + FLEXIBLE: system picks a seat (you'll implement this in TIX-003)
 func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID, eventCat int32) error {
-	// Not yet implemented — needs ReserveAvailableSeat RPC (TIX-003)
-	// You can return an error for now so nothing breaks silently
-	return fmt.Errorf("FLEXIBLE booking not yet implemented: see TIX-003")
+	resp, err := s.ticketSVC.ReserveSeat(ctx, &ticketRPC.ReserveFlexibleSeatRequest{
+		EventCategoryId: eventCat,
+		EventId:         eventID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("reserve flexible seat: %w", err)
+	}
+
+	// Save booking — include the assigned seat number so user knows where they're sitting
+	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
+		EventID:    eventID,
+		EventType:  eventCat,
+		TicketID:   resp.GetTicketId(),
+		UserID:     userID,
+		SeatNumber: resp.GetSeatNumber(),
+		Status:     "CONFIRMED",
+	})
+	if err != nil {
+		return fmt.Errorf("create booking after flexible reserve: %w", err)
+	}
+
+	return nil
 }
 
 // STANDING: no seat, just check there's capacity

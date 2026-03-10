@@ -11,12 +11,13 @@ type BookingService interface {
 }
 
 type CreateBooking struct {
-	ID        string
-	EventID   int32
-	TicketID  int32
-	UserID    int32
-	EventType int32
-	Status    string
+	ID         string
+	EventID    int32
+	TicketID   int32
+	UserID     int32
+	EventType  int32
+	Status     string
+	SeatNumber string
 }
 
 type BookingRequest struct {

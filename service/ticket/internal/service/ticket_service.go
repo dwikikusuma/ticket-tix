@@ -261,6 +261,14 @@ func (s *TicketService) ValidateTicketBooking(ctx context.Context, seatId string
 	return nil
 }
 
+func (s *TicketService) ReserveAvailableSeat(ctx context.Context, eventCatID int32) (string, int32, error) {
+	seatNum, ticketID, err := s.repo.ReserveAvailableSeat(ctx, eventCatID)
+	if err != nil {
+		return "", 0, fmt.Errorf("reserve available seat: %w", err)
+	}
+	return seatNum, ticketID, nil
+}
+
 func (s *TicketService) insertFiles(ctx context.Context, eventID int32, files []model.FileData) ([]string, error) {
 	filesKey := make([]string, 0, len(files))
 	for _, file := range files {

@@ -6,6 +6,7 @@ option go_package = "github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;tick
 service TicketService {
   rpc UpdateTicketStatus (UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
   rpc ValidateTicket (ValidateTicketRequest) returns (ValidateTicketResponse);
+  rpc ReserveSeat (ReserveFlexibleSeatRequest) returns (ReserveFlexibleSeatResponse);
 }
 
 message UpdateTicketStatusRequest {
@@ -27,4 +28,14 @@ message ValidateTicketRequest {
 
 message ValidateTicketResponse {
   bool is_valid = 1;
+}
+
+message ReserveFlexibleSeatRequest {
+  int32 event_category_id = 1;
+  int32 event_id          = 2;
+}
+
+message ReserveFlexibleSeatResponse {
+  int32  ticket_id    = 1;
+  string seat_number  = 2;
 }

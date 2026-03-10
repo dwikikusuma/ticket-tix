@@ -21,6 +21,7 @@ type Querier interface {
 	InsertEventCategory(ctx context.Context, arg InsertEventCategoryParams) (EventCategory, error)
 	InsertEventImage(ctx context.Context, arg InsertEventImageParams) (EventImage, error)
 	InsertTicket(ctx context.Context, arg InsertTicketParams) (Ticket, error)
+	ReserveAvailableSeat(ctx context.Context, eventCategoryID int32) (ReserveAvailableSeatRow, error)
 	UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) (int32, error)
 }
 

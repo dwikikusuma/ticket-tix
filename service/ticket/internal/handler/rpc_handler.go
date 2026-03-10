@@ -37,3 +37,14 @@ func (h *RPCHandler) ValidateTicket(ctx context.Context, req *ticketRPC.Validate
 		IsValid: true,
 	}, nil
 }
+
+func (h *RPCHandler) ReserveAvailableSeat(ctx context.Context, req *ticketRPC.ReserveFlexibleSeatRequest) (*ticketRPC.ReserveFlexibleSeatResponse, error) {
+	seatNum, tixID, err := h.svc.ReserveAvailableSeat(ctx, req.GetEventCategoryId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to reserve available seat: %v", err)
+	}
+	return &ticketRPC.ReserveFlexibleSeatResponse{
+		TicketId:   tixID,
+		SeatNumber: seatNum,
+	}, nil
+}

@@ -72,11 +72,16 @@ SELECT * FROM tickets
 WHERE event_category_id = $1 AND seat_number = $2
 LIMIT 1;
 
--- -- name: GetEventCategoryByEventIdAndSeat :one
--- SELECT
---     ec.name, ec.category_type, ec.price, ec.book_type,
---     ec.available_stock, ec.total_capacity
--- FROM event_categories ec
--- LEFT JOIN tickets t ON ec.id = t.event_category_id
--- WHERE t.seat_number = $1 AND ec.event_id = $2
--- LIMIT 1;
+-- name: ReserveAvailableSeat :one
+UPDATE tickets
+SET status = 'SOLD'
+WHERE id = (
+    SELECT t.id
+    FROM tickets t
+    WHERE t.event_category_id = $1
+      AND t.status = 'AVAILABLE'
+    ORDER BY t.id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+            )
+RETURNING id, seat_number;

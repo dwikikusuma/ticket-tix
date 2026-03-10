@@ -404,6 +404,33 @@ func (q *Queries) InsertTicket(ctx context.Context, arg InsertTicketParams) (Tic
 	return i, err
 }
 
+const reserveAvailableSeat = `-- name: ReserveAvailableSeat :one
+UPDATE tickets
+SET status = 'SOLD'
+WHERE id = (
+    SELECT t.id
+    FROM tickets t
+    WHERE t.event_category_id = $1
+      AND t.status = 'AVAILABLE'
+    ORDER BY t.id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+            )
+RETURNING id, seat_number
+`
+
+type ReserveAvailableSeatRow struct {
+	ID         int32          `json:"id"`
+	SeatNumber sql.NullString `json:"seat_number"`
+}
+
+func (q *Queries) ReserveAvailableSeat(ctx context.Context, eventCategoryID int32) (ReserveAvailableSeatRow, error) {
+	row := q.db.QueryRowContext(ctx, reserveAvailableSeat, eventCategoryID)
+	var i ReserveAvailableSeatRow
+	err := row.Scan(&i.ID, &i.SeatNumber)
+	return i, err
+}
+
 const updateTicketStatus = `-- name: UpdateTicketStatus :one
 UPDATE tickets
 SET status = $1, reserved_until = $2

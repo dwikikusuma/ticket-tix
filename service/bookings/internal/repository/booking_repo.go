@@ -19,10 +19,18 @@ func NewBookingRepo(db *sql.DB) model.BookingRepo {
 
 func (r *bookingRepo) CreateBooking(ctx context.Context, bookingDetail model.CreateBooking) (model.CreateBooking, error) {
 	var ticketIDNullInt sql.NullInt32
+	var seatNumberNullString sql.NullString
+
 	if bookingDetail.TicketID != 0 {
 		ticketIDNullInt = sql.NullInt32{Int32: bookingDetail.TicketID, Valid: true}
 	} else {
 		ticketIDNullInt = sql.NullInt32{Valid: false}
+	}
+
+	if bookingDetail.SeatNumber != "" {
+		seatNumberNullString = sql.NullString{String: bookingDetail.SeatNumber, Valid: true}
+	} else {
+		seatNumberNullString = sql.NullString{Valid: false}
 	}
 
 	// FIX: EventID was missing from CreateBookingParams despite being NOT NULL in the DB schema.
@@ -34,6 +42,7 @@ func (r *bookingRepo) CreateBooking(ctx context.Context, bookingDetail model.Cre
 		EventCategoryID: bookingDetail.EventType,
 		EventID:         bookingDetail.EventID,
 		Status:          bookingDetail.Status,
+		SeatNumber:      seatNumberNullString,
 	})
 	if err != nil {
 		return model.CreateBooking{}, err

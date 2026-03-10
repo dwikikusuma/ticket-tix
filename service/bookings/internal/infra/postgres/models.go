@@ -12,13 +12,14 @@ import (
 )
 
 type Booking struct {
-	ID              uuid.UUID     `json:"id"`
-	TicketID        sql.NullInt32 `json:"ticket_id"`
-	Status          string        `json:"status"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UserID          int32         `json:"user_id"`
-	EventID         int32         `json:"event_id"`
-	EventCategoryID int32         `json:"event_category_id"`
+	ID              uuid.UUID      `json:"id"`
+	TicketID        sql.NullInt32  `json:"ticket_id"`
+	Status          string         `json:"status"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UserID          int32          `json:"user_id"`
+	EventID         int32          `json:"event_id"`
+	EventCategoryID int32          `json:"event_category_id"`
+	SeatNumber      sql.NullString `json:"seat_number"`
 }
 
 type CategoryType struct {

@@ -11,17 +11,18 @@ import (
 )
 
 const createBooking = `-- name: CreateBooking :one
-INSERT INTO bookings (ticket_id, status, user_id, event_category_id, event_id)
-VALUES ($1, $2, $3, $4, $5)
-    RETURNING id, ticket_id, status, created_at, user_id, event_id, event_category_id
+INSERT INTO bookings (ticket_id, status, user_id, event_category_id, event_id, seat_number)
+VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING id, ticket_id, status, created_at, user_id, event_id, event_category_id, seat_number
 `
 
 type CreateBookingParams struct {
-	TicketID        sql.NullInt32 `json:"ticket_id"`
-	Status          string        `json:"status"`
-	UserID          int32         `json:"user_id"`
-	EventCategoryID int32         `json:"event_category_id"`
-	EventID         int32         `json:"event_id"`
+	TicketID        sql.NullInt32  `json:"ticket_id"`
+	Status          string         `json:"status"`
+	UserID          int32          `json:"user_id"`
+	EventCategoryID int32          `json:"event_category_id"`
+	EventID         int32          `json:"event_id"`
+	SeatNumber      sql.NullString `json:"seat_number"`
 }
 
 func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (Booking, error) {
@@ -31,6 +32,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 		arg.UserID,
 		arg.EventCategoryID,
 		arg.EventID,
+		arg.SeatNumber,
 	)
 	var i Booking
 	err := row.Scan(
@@ -41,6 +43,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (B
 		&i.UserID,
 		&i.EventID,
 		&i.EventCategoryID,
+		&i.SeatNumber,
 	)
 	return i, err
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	ticketDB "ticket-tix/service/ticket/internal/infra/postgres"
 	"ticket-tix/service/ticket/internal/model"
 	"time"
@@ -205,26 +204,18 @@ func (r *ticketRepo) GetTicketSeatAndEventCategory(ctx context.Context, seatNum 
 		ReservedUntil:   ticketDetail.ReservedUntil.Time,
 	}, nil
 }
-func toModel(e ticketDB.Event) model.EventData {
-	return model.EventData{
-		ID:          e.ID,
-		Name:        e.Name,
-		Description: e.Description.String,
-		Location:    e.Location,
-		StartTime:   e.StartTime,
-		EndTime:     e.EndTime,
-	}
-}
 
-func toModelEventCategory(ec ticketDB.EventCategory) model.EventCategoryData {
-	price, _ := strconv.ParseFloat(ec.Price, 64)
-	return model.EventCategoryData{
-		EventID:           ec.EventID,
-		CategoryID:        ec.ID,
-		CategoryType:      ec.CategoryType.String,
-		Price:             price,
-		BookType:          ec.BookType,
-		TotalCapacity:     ec.TotalCapacity,
-		AvailableCapacity: ec.AvailableStock,
+func (r *ticketRepo) ReserveAvailableSeat(ctx context.Context, eventCatID int32) (string, int32, error) {
+	seatRow, err := r.db.ReserveAvailableSeat(ctx, eventCatID)
+	if err != nil {
+		fmt.Printf("reserve available seat: %v\n", err)
+		return "", 0, fmt.Errorf("reserve available seat: %w", err)
 	}
+
+	if seatRow.SeatNumber.String == "" || seatRow.ID == 0 {
+		fmt.Printf("reserve available seat: %v\n", seatRow.SeatNumber.String)
+		return "", 0, fmt.Errorf("no available seat to reserve")
+	}
+
+	return seatRow.SeatNumber.String, seatRow.ID, nil
 }
