@@ -7,6 +7,7 @@ service TicketService {
   rpc UpdateTicketStatus (UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
   rpc ValidateTicket (ValidateTicketRequest) returns (ValidateTicketResponse);
   rpc ReserveSeat (ReserveFlexibleSeatRequest) returns (ReserveFlexibleSeatResponse);
+  rpc DecreaseTicket (DecreaseTicketRequest) returns (DecreaseTicketResponse);
 }
 
 message UpdateTicketStatusRequest {
@@ -38,4 +39,12 @@ message ReserveFlexibleSeatRequest {
 message ReserveFlexibleSeatResponse {
   int32  ticket_id    = 1;
   string seat_number  = 2;
+}
+
+message DecreaseTicketRequest {
+  int32 event_category_id = 1;
+  int64 decrease_by = 2;
+}
+
+message DecreaseTicketResponse {
 }

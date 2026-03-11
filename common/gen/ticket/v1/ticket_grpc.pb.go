@@ -22,6 +22,7 @@ const (
 	TicketService_UpdateTicketStatus_FullMethodName = "/ticket.TicketService/UpdateTicketStatus"
 	TicketService_ValidateTicket_FullMethodName     = "/ticket.TicketService/ValidateTicket"
 	TicketService_ReserveSeat_FullMethodName        = "/ticket.TicketService/ReserveSeat"
+	TicketService_DecreaseTicket_FullMethodName     = "/ticket.TicketService/DecreaseTicket"
 )
 
 // TicketServiceClient is the client API for TicketService service.
@@ -31,6 +32,7 @@ type TicketServiceClient interface {
 	UpdateTicketStatus(ctx context.Context, in *UpdateTicketStatusRequest, opts ...grpc.CallOption) (*UpdateTicketStatusResponse, error)
 	ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error)
 	ReserveSeat(ctx context.Context, in *ReserveFlexibleSeatRequest, opts ...grpc.CallOption) (*ReserveFlexibleSeatResponse, error)
+	DecreaseTicket(ctx context.Context, in *DecreaseTicketRequest, opts ...grpc.CallOption) (*DecreaseTicketResponse, error)
 }
 
 type ticketServiceClient struct {
@@ -71,6 +73,16 @@ func (c *ticketServiceClient) ReserveSeat(ctx context.Context, in *ReserveFlexib
 	return out, nil
 }
 
+func (c *ticketServiceClient) DecreaseTicket(ctx context.Context, in *DecreaseTicketRequest, opts ...grpc.CallOption) (*DecreaseTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DecreaseTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_DecreaseTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TicketServiceServer is the server API for TicketService service.
 // All implementations must embed UnimplementedTicketServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type TicketServiceServer interface {
 	UpdateTicketStatus(context.Context, *UpdateTicketStatusRequest) (*UpdateTicketStatusResponse, error)
 	ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error)
 	ReserveSeat(context.Context, *ReserveFlexibleSeatRequest) (*ReserveFlexibleSeatResponse, error)
+	DecreaseTicket(context.Context, *DecreaseTicketRequest) (*DecreaseTicketResponse, error)
 	mustEmbedUnimplementedTicketServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedTicketServiceServer) ValidateTicket(context.Context, *Validat
 }
 func (UnimplementedTicketServiceServer) ReserveSeat(context.Context, *ReserveFlexibleSeatRequest) (*ReserveFlexibleSeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReserveSeat not implemented")
+}
+func (UnimplementedTicketServiceServer) DecreaseTicket(context.Context, *DecreaseTicketRequest) (*DecreaseTicketResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DecreaseTicket not implemented")
 }
 func (UnimplementedTicketServiceServer) mustEmbedUnimplementedTicketServiceServer() {}
 func (UnimplementedTicketServiceServer) testEmbeddedByValue()                       {}
@@ -172,6 +188,24 @@ func _TicketService_ReserveSeat_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TicketService_DecreaseTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecreaseTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServiceServer).DecreaseTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketService_DecreaseTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServiceServer).DecreaseTicket(ctx, req.(*DecreaseTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TicketService_ServiceDesc is the grpc.ServiceDesc for TicketService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var TicketService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReserveSeat",
 			Handler:    _TicketService_ReserveSeat_Handler,
+		},
+		{
+			MethodName: "DecreaseTicket",
+			Handler:    _TicketService_DecreaseTicket_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

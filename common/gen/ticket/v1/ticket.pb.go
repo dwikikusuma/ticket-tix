@@ -341,6 +341,94 @@ func (x *ReserveFlexibleSeatResponse) GetSeatNumber() string {
 	return ""
 }
 
+type DecreaseTicketRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventCategoryId int32                  `protobuf:"varint,1,opt,name=event_category_id,json=eventCategoryId,proto3" json:"event_category_id,omitempty"`
+	DecreaseBy      int64                  `protobuf:"varint,2,opt,name=decrease_by,json=decreaseBy,proto3" json:"decrease_by,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DecreaseTicketRequest) Reset() {
+	*x = DecreaseTicketRequest{}
+	mi := &file_ticket_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecreaseTicketRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecreaseTicketRequest) ProtoMessage() {}
+
+func (x *DecreaseTicketRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecreaseTicketRequest.ProtoReflect.Descriptor instead.
+func (*DecreaseTicketRequest) Descriptor() ([]byte, []int) {
+	return file_ticket_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DecreaseTicketRequest) GetEventCategoryId() int32 {
+	if x != nil {
+		return x.EventCategoryId
+	}
+	return 0
+}
+
+func (x *DecreaseTicketRequest) GetDecreaseBy() int64 {
+	if x != nil {
+		return x.DecreaseBy
+	}
+	return 0
+}
+
+type DecreaseTicketResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecreaseTicketResponse) Reset() {
+	*x = DecreaseTicketResponse{}
+	mi := &file_ticket_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecreaseTicketResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecreaseTicketResponse) ProtoMessage() {}
+
+func (x *DecreaseTicketResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_ticket_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecreaseTicketResponse.ProtoReflect.Descriptor instead.
+func (*DecreaseTicketResponse) Descriptor() ([]byte, []int) {
+	return file_ticket_proto_rawDescGZIP(), []int{7}
+}
+
 var File_ticket_proto protoreflect.FileDescriptor
 
 const file_ticket_proto_rawDesc = "" +
@@ -365,11 +453,17 @@ const file_ticket_proto_rawDesc = "" +
 	"\x1bReserveFlexibleSeatResponse\x12\x1b\n" +
 	"\tticket_id\x18\x01 \x01(\x05R\bticketId\x12\x1f\n" +
 	"\vseat_number\x18\x02 \x01(\tR\n" +
-	"seatNumber2\x95\x02\n" +
+	"seatNumber\"d\n" +
+	"\x15DecreaseTicketRequest\x12*\n" +
+	"\x11event_category_id\x18\x01 \x01(\x05R\x0feventCategoryId\x12\x1f\n" +
+	"\vdecrease_by\x18\x02 \x01(\x03R\n" +
+	"decreaseBy\"\x18\n" +
+	"\x16DecreaseTicketResponse2\xe6\x02\n" +
 	"\rTicketService\x12[\n" +
 	"\x12UpdateTicketStatus\x12!.ticket.UpdateTicketStatusRequest\x1a\".ticket.UpdateTicketStatusResponse\x12O\n" +
 	"\x0eValidateTicket\x12\x1d.ticket.ValidateTicketRequest\x1a\x1e.ticket.ValidateTicketResponse\x12V\n" +
-	"\vReserveSeat\x12\".ticket.ReserveFlexibleSeatRequest\x1a#.ticket.ReserveFlexibleSeatResponseBAZ?github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1b\x06proto3"
+	"\vReserveSeat\x12\".ticket.ReserveFlexibleSeatRequest\x1a#.ticket.ReserveFlexibleSeatResponse\x12O\n" +
+	"\x0eDecreaseTicket\x12\x1d.ticket.DecreaseTicketRequest\x1a\x1e.ticket.DecreaseTicketResponseBAZ?github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1b\x06proto3"
 
 var (
 	file_ticket_proto_rawDescOnce sync.Once
@@ -383,7 +477,7 @@ func file_ticket_proto_rawDescGZIP() []byte {
 	return file_ticket_proto_rawDescData
 }
 
-var file_ticket_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_ticket_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_ticket_proto_goTypes = []any{
 	(*UpdateTicketStatusRequest)(nil),   // 0: ticket.UpdateTicketStatusRequest
 	(*UpdateTicketStatusResponse)(nil),  // 1: ticket.UpdateTicketStatusResponse
@@ -391,16 +485,20 @@ var file_ticket_proto_goTypes = []any{
 	(*ValidateTicketResponse)(nil),      // 3: ticket.ValidateTicketResponse
 	(*ReserveFlexibleSeatRequest)(nil),  // 4: ticket.ReserveFlexibleSeatRequest
 	(*ReserveFlexibleSeatResponse)(nil), // 5: ticket.ReserveFlexibleSeatResponse
+	(*DecreaseTicketRequest)(nil),       // 6: ticket.DecreaseTicketRequest
+	(*DecreaseTicketResponse)(nil),      // 7: ticket.DecreaseTicketResponse
 }
 var file_ticket_proto_depIdxs = []int32{
 	0, // 0: ticket.TicketService.UpdateTicketStatus:input_type -> ticket.UpdateTicketStatusRequest
 	2, // 1: ticket.TicketService.ValidateTicket:input_type -> ticket.ValidateTicketRequest
 	4, // 2: ticket.TicketService.ReserveSeat:input_type -> ticket.ReserveFlexibleSeatRequest
-	1, // 3: ticket.TicketService.UpdateTicketStatus:output_type -> ticket.UpdateTicketStatusResponse
-	3, // 4: ticket.TicketService.ValidateTicket:output_type -> ticket.ValidateTicketResponse
-	5, // 5: ticket.TicketService.ReserveSeat:output_type -> ticket.ReserveFlexibleSeatResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	6, // 3: ticket.TicketService.DecreaseTicket:input_type -> ticket.DecreaseTicketRequest
+	1, // 4: ticket.TicketService.UpdateTicketStatus:output_type -> ticket.UpdateTicketStatusResponse
+	3, // 5: ticket.TicketService.ValidateTicket:output_type -> ticket.ValidateTicketResponse
+	5, // 6: ticket.TicketService.ReserveSeat:output_type -> ticket.ReserveFlexibleSeatResponse
+	7, // 7: ticket.TicketService.DecreaseTicket:output_type -> ticket.DecreaseTicketResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -417,7 +515,7 @@ func file_ticket_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ticket_proto_rawDesc), len(file_ticket_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

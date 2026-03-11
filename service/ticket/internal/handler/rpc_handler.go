@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	ticketRPC "ticket-tix/common/gen/ticket/v1"
+	"ticket-tix/service/ticket/internal/infra/redis"
 	"ticket-tix/service/ticket/internal/model"
 
 	"google.golang.org/grpc/codes"
@@ -11,11 +12,15 @@ import (
 
 type RPCHandler struct {
 	ticketRPC.UnimplementedTicketServiceServer
-	svc model.TicketService
+	svc          model.TicketService
+	stockCounter redis.StockCounter
 }
 
-func NewRPCHandler(svc model.TicketService) *RPCHandler {
-	return &RPCHandler{svc: svc}
+func NewRPCHandler(svc model.TicketService, stockCounter redis.StockCounter) *RPCHandler {
+	return &RPCHandler{
+		svc:          svc,
+		stockCounter: stockCounter,
+	}
 }
 
 func (h *RPCHandler) UpdateTicketStatus(ctx context.Context, req *ticketRPC.UpdateTicketStatusRequest) (*ticketRPC.UpdateTicketStatusResponse, error) {
@@ -47,4 +52,13 @@ func (h *RPCHandler) ReserveAvailableSeat(ctx context.Context, req *ticketRPC.Re
 		TicketId:   tixID,
 		SeatNumber: seatNum,
 	}, nil
+}
+
+func (h *RPCHandler) DecreaseTicket(ctx context.Context, req *ticketRPC.DecreaseTicketRequest) (*ticketRPC.DecreaseTicketResponse, error) {
+	eventCat := req.GetEventCategoryId()
+	decreaseBy := req.GetDecreaseBy()
+	if err := h.stockCounter.Decrement(ctx, eventCat, decreaseBy); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to decrease ticket stock: %v", err)
+	}
+	return &ticketRPC.DecreaseTicketResponse{}, nil
 }
