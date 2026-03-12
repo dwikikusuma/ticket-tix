@@ -85,3 +85,12 @@ WHERE id = (
     FOR UPDATE SKIP LOCKED
             )
 RETURNING id, seat_number;
+
+-- name: GetAllStandingCategoriesAvailStock :many
+SELECT id, available_stock FROM event_categories
+WHERE category_type = 'STANDING';
+
+-- name: UpdateEventCategoryAvailStock :exec
+UPDATE event_categories
+SET available_stock = $1
+WHERE id = $2;

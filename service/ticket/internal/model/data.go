@@ -79,3 +79,8 @@ type TicketData struct {
 	Status          string    `json:"status"`
 	ReservedUntil   time.Time `json:"reserved_until"`
 }
+
+type EventCatStock struct {
+	EventCatID int32
+	Stock      int64
+}

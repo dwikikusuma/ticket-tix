@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]BrowseEventsRow, error)
 	DeleteEventImage(ctx context.Context, imageKey string) error
+	GetAllStandingCategoriesAvailStock(ctx context.Context) ([]GetAllStandingCategoriesAvailStockRow, error)
 	GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error)
 	GetEventCategoryById(ctx context.Context, id int32) (EventCategory, error)
 	GetEventDetails(ctx context.Context, id int32) (Event, error)
@@ -22,6 +23,7 @@ type Querier interface {
 	InsertEventImage(ctx context.Context, arg InsertEventImageParams) (EventImage, error)
 	InsertTicket(ctx context.Context, arg InsertTicketParams) (Ticket, error)
 	ReserveAvailableSeat(ctx context.Context, eventCategoryID int32) (ReserveAvailableSeatRow, error)
+	UpdateEventCategoryAvailStock(ctx context.Context, arg UpdateEventCategoryAvailStockParams) error
 	UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) (int32, error)
 }
 

@@ -219,3 +219,19 @@ func (r *ticketRepo) ReserveAvailableSeat(ctx context.Context, eventCatID int32)
 
 	return seatRow.SeatNumber.String, seatRow.ID, nil
 }
+
+func (r *ticketRepo) GetAllStandingEventCatStock(ctx context.Context) ([]model.EventCatStock, error) {
+	var stock []model.EventCatStock
+	eventsStock, err := r.db.GetAllStandingCategoriesAvailStock(ctx)
+	if err != nil {
+		return stock, err
+	}
+
+	for _, eventStock := range eventsStock {
+		stock = append(stock, model.EventCatStock{
+			EventCatID: eventStock.ID,
+			Stock:      int64(eventStock.AvailableStock),
+		})
+	}
+	return stock, nil
+}

@@ -100,6 +100,39 @@ func (q *Queries) DeleteEventImage(ctx context.Context, imageKey string) error {
 	return err
 }
 
+const getAllStandingCategoriesAvailStock = `-- name: GetAllStandingCategoriesAvailStock :many
+SELECT id, available_stock FROM event_categories
+WHERE category_type = 'STANDING'
+`
+
+type GetAllStandingCategoriesAvailStockRow struct {
+	ID             int32 `json:"id"`
+	AvailableStock int32 `json:"available_stock"`
+}
+
+func (q *Queries) GetAllStandingCategoriesAvailStock(ctx context.Context) ([]GetAllStandingCategoriesAvailStockRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllStandingCategoriesAvailStock)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllStandingCategoriesAvailStockRow
+	for rows.Next() {
+		var i GetAllStandingCategoriesAvailStockRow
+		if err := rows.Scan(&i.ID, &i.AvailableStock); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getEventCategories = `-- name: GetEventCategories :many
 SELECT id, event_id, name, category_type, price, book_type, total_capacity, available_stock FROM event_categories
 WHERE event_id = $1
@@ -242,7 +275,7 @@ func (q *Queries) GetTicketSeatAndEventCat(ctx context.Context, arg GetTicketSea
 const insertBooking = `-- name: InsertBooking :one
 INSERT INTO bookings (ticket_id, status)
 VALUES ($1, $2)
-    RETURNING id, ticket_id, status, created_at, user_id, event_id, event_category_id
+    RETURNING id, ticket_id, status, created_at, user_id, event_id, event_category_id, seat_number
 `
 
 type InsertBookingParams struct {
@@ -261,6 +294,7 @@ func (q *Queries) InsertBooking(ctx context.Context, arg InsertBookingParams) (B
 		&i.UserID,
 		&i.EventID,
 		&i.EventCategoryID,
+		&i.SeatNumber,
 	)
 	return i, err
 }
@@ -429,6 +463,22 @@ func (q *Queries) ReserveAvailableSeat(ctx context.Context, eventCategoryID int3
 	var i ReserveAvailableSeatRow
 	err := row.Scan(&i.ID, &i.SeatNumber)
 	return i, err
+}
+
+const updateEventCategoryAvailStock = `-- name: UpdateEventCategoryAvailStock :exec
+UPDATE event_categories
+SET available_stock = $1
+WHERE id = $2
+`
+
+type UpdateEventCategoryAvailStockParams struct {
+	AvailableStock int32 `json:"available_stock"`
+	ID             int32 `json:"id"`
+}
+
+func (q *Queries) UpdateEventCategoryAvailStock(ctx context.Context, arg UpdateEventCategoryAvailStockParams) error {
+	_, err := q.db.ExecContext(ctx, updateEventCategoryAvailStock, arg.AvailableStock, arg.ID)
+	return err
 }
 
 const updateTicketStatus = `-- name: UpdateTicketStatus :one
