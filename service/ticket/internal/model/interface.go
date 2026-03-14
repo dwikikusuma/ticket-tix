@@ -19,6 +19,7 @@ type TicketRepo interface {
 	GetTicketSeatAndEventCategory(ctx context.Context, seatNum string, eventCatID int32) (TicketData, error)
 	ReserveAvailableSeat(ctx context.Context, eventCatID int32) (string, int32, error)
 	GetAllStandingEventCatStock(ctx context.Context) ([]EventCatStock, error)
+	UpdateEventCategoryStock(ctx context.Context, eventCatID int32, stock int64) error
 }
 
 type TicketService interface {

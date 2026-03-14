@@ -12,7 +12,9 @@ import (
 	"syscall"
 	"ticket-tix/common/pkg/db"
 	"ticket-tix/common/pkg/storage"
+	"ticket-tix/service/ticket/cmd/jobs"
 	"ticket-tix/service/ticket/internal/handler"
+	intRedis "ticket-tix/service/ticket/internal/infra/redis"
 	"ticket-tix/service/ticket/internal/repository"
 	"ticket-tix/service/ticket/internal/service"
 	"time"
@@ -20,6 +22,7 @@ import (
 	ticketRPC "ticket-tix/common/gen/ticket/v1"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -48,20 +51,36 @@ const (
 
 func main() {
 	log.Println("ticket-tix start")
+	// centralized signal handling
+	backgroundCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	ticketDB := openDBConnection()
 	defer ticketDB.Close()
 
 	minioStorage := openStorageConnection()
 
+	redisClient := openRedisConnection()
+	defer redisClient.Close()
+
+	stockCounter := intRedis.NewStockCounter(redisClient)
+
 	ticketRepo := repository.NewTicketRepo(ticketDB)
 	ticketService := service.NewTicketService(ticketDB, minioStorage, ticketRepo)
 	ticketHandler := handler.NewTicketHandler(ticketService)
 
 	grpcServer := grpc.NewServer()
-	rpcHandler := handler.NewRPCHandler(ticketService)
+	rpcHandler := handler.NewRPCHandler(ticketService, stockCounter)
+
 	ticketRPC.RegisterTicketServiceServer(grpcServer, rpcHandler)
 	reflection.Register(grpcServer)
+
+	stockSynchronization := jobs.NewStockSyncJob(&stockCounter, ticketRepo)
+	if syncErr := stockSynchronization.SeedAll(backgroundCtx); syncErr != nil {
+		log.Fatalf("failed to seed stock counter: %v", syncErr)
+	}
+	go stockSynchronization.SyncEventStockJob(backgroundCtx)
+	defer cancel()
 
 	r := gin.Default()
 	r.Use(func(c *gin.Context) {
@@ -76,12 +95,8 @@ func main() {
 	})
 	ticketHandler.RegisterRoutes(r)
 
-	// centralized signal handling
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	var wg sync.WaitGroup
-	httpServer := spinUpHTTPServer(ctx, r, &wg)
+	httpServer := spinUpHTTPServer(backgroundCtx, r, &wg)
 	spinUpGRPCServer(grpcServer, &wg)
 
 	log.Println("all services started")
@@ -98,6 +113,21 @@ func main() {
 
 	wg.Wait()
 	log.Println("all servers stopped, bye!")
+}
+
+func openRedisConnection() *redis.Client {
+	log.Println("opening redis connection")
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("failed to connect to redis: %v", err)
+	}
+	log.Println("redis connected")
+	return redisClient
 }
 
 func spinUpHTTPServer(ctx context.Context, r *gin.Engine, wg *sync.WaitGroup) *http.Server {

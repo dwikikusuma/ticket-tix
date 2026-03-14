@@ -235,3 +235,15 @@ func (r *ticketRepo) GetAllStandingEventCatStock(ctx context.Context) ([]model.E
 	}
 	return stock, nil
 }
+
+func (r *ticketRepo) UpdateEventCategoryStock(ctx context.Context, eventCatID int32, stock int64) error {
+	err := r.db.UpdateEventCategoryAvailStock(ctx, ticketDB.UpdateEventCategoryAvailStockParams{
+		ID:             eventCatID,
+		AvailableStock: int32(stock),
+	})
+
+	if err != nil {
+		return fmt.Errorf("update event category stock: %w", err)
+	}
+	return nil
+}
