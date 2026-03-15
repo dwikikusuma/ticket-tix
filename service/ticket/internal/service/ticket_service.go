@@ -71,11 +71,11 @@ func (s *TicketService) DeleteImg(ctx context.Context, key string) error {
 
 	txRepo := s.repo.WithTx(tx)
 	err = txRepo.DeleteEventImage(ctx, key)
-	if err != nil {
-		return fmt.Errorf("delete event image from db: %w", err)
-	}
 	if err := s.storage.Delete(ctx, key); err != nil {
 		return fmt.Errorf("delete image: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
 	return nil
 }

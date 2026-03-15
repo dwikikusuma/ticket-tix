@@ -26,7 +26,7 @@ func NewRPCHandler(svc model.TicketService, stockCounter redis.StockCounter) *RP
 func (h *RPCHandler) UpdateTicketStatus(ctx context.Context, req *ticketRPC.UpdateTicketStatusRequest) (*ticketRPC.UpdateTicketStatusResponse, error) {
 	ticketID, err := h.svc.UpdateTicketStatus(ctx, req.Status, req.SeatId, req.EventCategory)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update ticket status: %v", err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to update ticket status: %v", err)
 	}
 	return &ticketRPC.UpdateTicketStatusResponse{
 		TicketId: ticketID,
@@ -36,17 +36,17 @@ func (h *RPCHandler) UpdateTicketStatus(ctx context.Context, req *ticketRPC.Upda
 
 func (h *RPCHandler) ValidateTicket(ctx context.Context, req *ticketRPC.ValidateTicketRequest) (*ticketRPC.ValidateTicketResponse, error) {
 	if err := h.svc.ValidateTicketBooking(ctx, req.SeatId, req.EventId, req.EventCategory); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to validate ticket booking: %v", err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to validate ticket booking: %v", err)
 	}
 	return &ticketRPC.ValidateTicketResponse{
 		IsValid: true,
 	}, nil
 }
 
-func (h *RPCHandler) ReserveAvailableSeat(ctx context.Context, req *ticketRPC.ReserveFlexibleSeatRequest) (*ticketRPC.ReserveFlexibleSeatResponse, error) {
+func (h *RPCHandler) ReserveSeat(ctx context.Context, req *ticketRPC.ReserveFlexibleSeatRequest) (*ticketRPC.ReserveFlexibleSeatResponse, error) {
 	seatNum, tixID, err := h.svc.ReserveAvailableSeat(ctx, req.GetEventCategoryId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to reserve available seat: %v", err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to reserve available seat: %v", err)
 	}
 	return &ticketRPC.ReserveFlexibleSeatResponse{
 		TicketId:   tixID,
@@ -58,7 +58,7 @@ func (h *RPCHandler) DecreaseTicket(ctx context.Context, req *ticketRPC.Decrease
 	eventCat := req.GetEventCategoryId()
 	decreaseBy := req.GetDecreaseBy()
 	if err := h.stockCounter.Decrement(ctx, eventCat, decreaseBy); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to decrease ticket stock: %v", err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to decrease ticket stock: %v", err)
 	}
 	return &ticketRPC.DecreaseTicketResponse{}, nil
 }
@@ -68,7 +68,7 @@ func (h *RPCHandler) IncreaseTicket(ctx context.Context, req *ticketRPC.Increase
 	increaseBy := req.GetIncreaseBy()
 
 	if err := h.stockCounter.Increment(ctx, eventCat, increaseBy); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to increase ticket stock: %v", err)
+		return nil, status.Errorf(codes.ResourceExhausted, "failed to increase ticket stock: %v", err)
 	}
 	return &ticketRPC.IncreaseTicketResponse{}, nil
 }

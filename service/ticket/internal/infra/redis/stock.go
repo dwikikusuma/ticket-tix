@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/redis/go-redis/v9"
@@ -26,10 +27,12 @@ func (s *StockCounter) Seed(ctx context.Context, eventID int32, stock int64) err
 		Get:  false,
 	}).Err()
 
+	if errors.Is(err, redis.Nil) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("seed stock: %w", err)
 	}
-
 	return nil
 }
 
