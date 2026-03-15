@@ -23,6 +23,7 @@ const (
 	TicketService_ValidateTicket_FullMethodName     = "/ticket.TicketService/ValidateTicket"
 	TicketService_ReserveSeat_FullMethodName        = "/ticket.TicketService/ReserveSeat"
 	TicketService_DecreaseTicket_FullMethodName     = "/ticket.TicketService/DecreaseTicket"
+	TicketService_IncreaseTicket_FullMethodName     = "/ticket.TicketService/IncreaseTicket"
 )
 
 // TicketServiceClient is the client API for TicketService service.
@@ -33,6 +34,7 @@ type TicketServiceClient interface {
 	ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error)
 	ReserveSeat(ctx context.Context, in *ReserveFlexibleSeatRequest, opts ...grpc.CallOption) (*ReserveFlexibleSeatResponse, error)
 	DecreaseTicket(ctx context.Context, in *DecreaseTicketRequest, opts ...grpc.CallOption) (*DecreaseTicketResponse, error)
+	IncreaseTicket(ctx context.Context, in *IncreaseTicketRequest, opts ...grpc.CallOption) (*IncreaseTicketResponse, error)
 }
 
 type ticketServiceClient struct {
@@ -83,6 +85,16 @@ func (c *ticketServiceClient) DecreaseTicket(ctx context.Context, in *DecreaseTi
 	return out, nil
 }
 
+func (c *ticketServiceClient) IncreaseTicket(ctx context.Context, in *IncreaseTicketRequest, opts ...grpc.CallOption) (*IncreaseTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IncreaseTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_IncreaseTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TicketServiceServer is the server API for TicketService service.
 // All implementations must embed UnimplementedTicketServiceServer
 // for forward compatibility.
@@ -91,6 +103,7 @@ type TicketServiceServer interface {
 	ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error)
 	ReserveSeat(context.Context, *ReserveFlexibleSeatRequest) (*ReserveFlexibleSeatResponse, error)
 	DecreaseTicket(context.Context, *DecreaseTicketRequest) (*DecreaseTicketResponse, error)
+	IncreaseTicket(context.Context, *IncreaseTicketRequest) (*IncreaseTicketResponse, error)
 	mustEmbedUnimplementedTicketServiceServer()
 }
 
@@ -112,6 +125,9 @@ func (UnimplementedTicketServiceServer) ReserveSeat(context.Context, *ReserveFle
 }
 func (UnimplementedTicketServiceServer) DecreaseTicket(context.Context, *DecreaseTicketRequest) (*DecreaseTicketResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DecreaseTicket not implemented")
+}
+func (UnimplementedTicketServiceServer) IncreaseTicket(context.Context, *IncreaseTicketRequest) (*IncreaseTicketResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IncreaseTicket not implemented")
 }
 func (UnimplementedTicketServiceServer) mustEmbedUnimplementedTicketServiceServer() {}
 func (UnimplementedTicketServiceServer) testEmbeddedByValue()                       {}
@@ -206,6 +222,24 @@ func _TicketService_DecreaseTicket_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TicketService_IncreaseTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IncreaseTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServiceServer).IncreaseTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketService_IncreaseTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServiceServer).IncreaseTicket(ctx, req.(*IncreaseTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TicketService_ServiceDesc is the grpc.ServiceDesc for TicketService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,6 +262,10 @@ var TicketService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DecreaseTicket",
 			Handler:    _TicketService_DecreaseTicket_Handler,
+		},
+		{
+			MethodName: "IncreaseTicket",
+			Handler:    _TicketService_IncreaseTicket_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

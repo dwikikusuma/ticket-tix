@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	ticketRPC "ticket-tix/common/gen/ticket/v1"
 	"ticket-tix/service/bookings/internal/model"
 )
@@ -91,7 +92,6 @@ func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID
 		return fmt.Errorf("reserve flexible seat: %w", err)
 	}
 
-	// Save booking — include the assigned seat number so user knows where they're sitting
 	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:    eventID,
 		EventType:  eventCat,
@@ -109,30 +109,30 @@ func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID
 
 // STANDING: no seat, just check there's capacity
 func (s *bookingService) bookStanding(ctx context.Context, userID, eventID, eventCat int32) error {
-	// Step 1: validate capacity exists (stock check)
-	_, err := s.ticketSVC.ValidateTicket(ctx, &ticketRPC.ValidateTicketRequest{
-		SeatId:        "", // empty — no seat for standing
-		EventId:       eventID,
-		EventCategory: eventCat,
+	_, err := s.ticketSVC.DecreaseTicket(ctx, &ticketRPC.DecreaseTicketRequest{
+		EventCategoryId: eventCat,
+		DecreaseBy:      1,
 	})
+
 	if err != nil {
-		return fmt.Errorf("validate standing: %w", err)
+		return fmt.Errorf("decrease standing stock: %w", err)
 	}
 
-	// Step 2: save booking — no ticketID for standing
 	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:   eventID,
 		EventType: eventCat,
-		TicketID:  0, // null — standing tickets have no individual seat row
+		TicketID:  0,
 		UserID:    userID,
-		Status:    "CONFIRMED", // standing goes straight to confirmed, no payment gate
+		Status:    "CONFIRMED",
 	})
 	if err != nil {
+		_, incrErr := s.ticketSVC.IncreaseTicket(ctx, &ticketRPC.IncreaseTicketRequest{
+			EventCategoryId: eventCat,
+			IncreaseBy:      1,
+		})
+		log.Println("incrErr", incrErr) // implement dlq for failed compensations in production
 		return fmt.Errorf("create standing booking: %w", err)
 	}
 
-	// NOTE: stock decrement missing here — this is BUG-14, fixed in TIX-004.
-	// Right now two concurrent STANDING bookings can both succeed even if stock=1.
-	// That's your next ticket after this baseline works.
 	return nil
 }

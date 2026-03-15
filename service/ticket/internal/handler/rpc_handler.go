@@ -62,3 +62,13 @@ func (h *RPCHandler) DecreaseTicket(ctx context.Context, req *ticketRPC.Decrease
 	}
 	return &ticketRPC.DecreaseTicketResponse{}, nil
 }
+
+func (h *RPCHandler) IncreaseTicket(ctx context.Context, req *ticketRPC.IncreaseTicketRequest) (*ticketRPC.IncreaseTicketResponse, error) {
+	eventCat := req.GetEventCategoryId()
+	increaseBy := req.GetIncreaseBy()
+
+	if err := h.stockCounter.Increment(ctx, eventCat, increaseBy); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to increase ticket stock: %v", err)
+	}
+	return &ticketRPC.IncreaseTicketResponse{}, nil
+}
