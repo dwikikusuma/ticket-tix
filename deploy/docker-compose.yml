@@ -83,6 +83,20 @@ services:
       echo 'Bucket ticket-bucket is ready.'
       "
 
+  redis:
+    image: redis:7-alpine
+    container_name: ticket-tix-redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ticket-tix_net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 networks:
   ticket-tix_net:
     driver: bridge
@@ -91,3 +105,4 @@ volumes:
   ticket-tix-postgres:
   ticket-tix-elastic:
   ticket-tix-minio:
+  ticket-tix-redis:
