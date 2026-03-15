@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	BrowseEvents(ctx context.Context, arg BrowseEventsParams) ([]BrowseEventsRow, error)
 	DeleteEventImage(ctx context.Context, imageKey string) error
+	ExpireReservedTickets(ctx context.Context) ([]ExpireReservedTicketsRow, error)
 	GetAllStandingCategoriesAvailStock(ctx context.Context) ([]GetAllStandingCategoriesAvailStockRow, error)
 	GetEventCategories(ctx context.Context, eventID int32) ([]EventCategory, error)
 	GetEventCategoryById(ctx context.Context, id int32) (EventCategory, error)

@@ -84,3 +84,9 @@ type EventCatStock struct {
 	EventCatID int32
 	Stock      int64
 }
+
+type ExpiredSeat struct {
+	TicketID        int32
+	EventCategoryID int32
+	SeatNumber      string
+}

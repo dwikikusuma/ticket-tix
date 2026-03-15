@@ -79,7 +79,10 @@ func main() {
 	if syncErr := stockSynchronization.SeedAll(backgroundCtx); syncErr != nil {
 		log.Fatalf("failed to seed stock counter: %v", syncErr)
 	}
+
+	seatExpiringJob := jobs.NewExpireReservedSeatJob(ticketRepo)
 	go stockSynchronization.SyncEventStockJob(backgroundCtx)
+	go seatExpiringJob.Start(backgroundCtx)
 	defer cancel()
 
 	r := gin.Default()
@@ -96,7 +99,7 @@ func main() {
 	ticketHandler.RegisterRoutes(r)
 
 	var wg sync.WaitGroup
-	httpServer := spinUpHTTPServer(backgroundCtx, r, &wg)
+	httpServer := spinUpHTTPServer(r, &wg)
 	spinUpGRPCServer(grpcServer, &wg)
 
 	log.Println("all services started")
@@ -130,7 +133,7 @@ func openRedisConnection() *redis.Client {
 	return redisClient
 }
 
-func spinUpHTTPServer(ctx context.Context, r *gin.Engine, wg *sync.WaitGroup) *http.Server {
+func spinUpHTTPServer(r *gin.Engine, wg *sync.WaitGroup) *http.Server {
 	srv := &http.Server{
 		Addr:    ":" + httpPort,
 		Handler: r,

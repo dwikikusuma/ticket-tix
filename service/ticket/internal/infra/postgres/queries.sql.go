@@ -100,6 +100,42 @@ func (q *Queries) DeleteEventImage(ctx context.Context, imageKey string) error {
 	return err
 }
 
+const expireReservedTickets = `-- name: ExpireReservedTickets :many
+UPDATE tickets
+SET status = 'AVAILABLE', reserved_until = NULL
+WHERE status = "RESERVED" AND reserved_until < NOW()
+RETURNING id, event_category_id, seat_number
+`
+
+type ExpireReservedTicketsRow struct {
+	ID              int32          `json:"id"`
+	EventCategoryID int32          `json:"event_category_id"`
+	SeatNumber      sql.NullString `json:"seat_number"`
+}
+
+func (q *Queries) ExpireReservedTickets(ctx context.Context) ([]ExpireReservedTicketsRow, error) {
+	rows, err := q.db.QueryContext(ctx, expireReservedTickets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExpireReservedTicketsRow
+	for rows.Next() {
+		var i ExpireReservedTicketsRow
+		if err := rows.Scan(&i.ID, &i.EventCategoryID, &i.SeatNumber); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllStandingCategoriesAvailStock = `-- name: GetAllStandingCategoriesAvailStock :many
 SELECT id, available_stock FROM event_categories
 WHERE category_type = 'STANDING'

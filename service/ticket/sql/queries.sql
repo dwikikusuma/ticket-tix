@@ -94,3 +94,9 @@ WHERE category_type = 'STANDING';
 UPDATE event_categories
 SET available_stock = $1
 WHERE id = $2;
+
+-- name: ExpireReservedTickets :many
+UPDATE tickets
+SET status = 'AVAILABLE', reserved_until = NULL
+WHERE status = "RESERVED" AND reserved_until < NOW()
+RETURNING id, event_category_id, seat_number;

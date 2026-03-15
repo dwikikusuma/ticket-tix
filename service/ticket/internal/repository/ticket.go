@@ -247,3 +247,21 @@ func (r *ticketRepo) UpdateEventCategoryStock(ctx context.Context, eventCatID in
 	}
 	return nil
 }
+
+func (r *ticketRepo) ExpireReservedSeats(ctx context.Context) ([]model.ExpiredSeat, error) {
+	var res []model.ExpiredSeat
+	expiredSeat, err := r.db.ExpireReservedTickets(ctx)
+	if err != nil {
+		return res, fmt.Errorf("expire reserved seats: %w", err)
+	}
+
+	for _, seat := range expiredSeat {
+		res = append(res, model.ExpiredSeat{
+			TicketID:        seat.ID,
+			EventCategoryID: seat.EventCategoryID,
+			SeatNumber:      seat.SeatNumber.String,
+		})
+	}
+
+	return res, nil
+}
