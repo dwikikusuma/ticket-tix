@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"log"
 	ticketRPC "ticket-tix/common/gen/ticket/v1"
+	"ticket-tix/common/pkg/lock"
 	"ticket-tix/service/bookings/internal/model"
+	"time"
 )
 
 type bookingService struct {
 	repo      model.BookingRepo
 	ticketSVC ticketRPC.TicketServiceClient
+	lock      lock.DistributedLock
 }
 
 func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient) model.BookingService {
@@ -19,9 +22,6 @@ func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketService
 }
 
 func (s *bookingService) CreateBooking(ctx context.Context, userID int32, eventID, eventCat int32, seatID, bookType, categoryType string) error {
-	// Route based on WHAT TYPE OF BOOKING this is.
-	// Your old code only checked seatID != "" which is wrong —
-	// FLEXIBLE also sends empty seatID but needs completely different handling.
 	switch categoryType {
 	case "STANDING":
 		return s.bookStanding(ctx, userID, eventID, eventCat)
@@ -38,8 +38,13 @@ func (s *bookingService) CreateBooking(ctx context.Context, userID int32, eventI
 
 // SEATED + FIXED: client picks a specific seat
 func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, eventCat int32, seatID string) error {
-	// Step 1: validate the seat exists and is AVAILABLE
-	// (ticket-service checks status, event ownership, etc.)
+	seatKey := s.seatLockKey(eventCat, seatID)
+	token, accErr := s.lock.Acquire(ctx, seatKey, 30*time.Second)
+	if accErr != nil {
+		return fmt.Errorf("acquire seat lock: %w", accErr)
+	}
+	defer s.lock.Release(ctx, seatKey, token)
+
 	_, err := s.ticketSVC.ValidateTicket(ctx, &ticketRPC.ValidateTicketRequest{
 		SeatId:        seatID,
 		EventId:       eventID,
@@ -49,8 +54,6 @@ func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, e
 		return fmt.Errorf("validate ticket: %w", err)
 	}
 
-	// Step 2: reserve the seat — AVAILABLE → RESERVED
-	// "RESERVED" means "held while user pays", not "permanently booked"
 	reserved, err := s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
 		SeatId:        seatID,
 		EventCategory: eventCat,
@@ -60,7 +63,6 @@ func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, e
 		return fmt.Errorf("reserve ticket: %w", err)
 	}
 
-	// Step 3: save the booking record in our DB
 	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:   eventID,
 		EventType: eventCat,
@@ -69,9 +71,6 @@ func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, e
 		Status:    "PENDING",
 	})
 	if err != nil {
-		// Something went wrong saving — release the seat we just reserved.
-		// This is "best-effort compensation" — if this also fails, the expiry job
-		// will clean it up in 15 minutes. That's fine for now.
 		s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
 			SeatId:        seatID,
 			EventCategory: eventCat,
@@ -135,4 +134,8 @@ func (s *bookingService) bookStanding(ctx context.Context, userID, eventID, even
 	}
 
 	return nil
+}
+
+func (s *bookingService) seatLockKey(eventCatID int32, seatID string) string {
+	return fmt.Sprintf("lock:seat:%d:%s", eventCatID, seatID)
 }
