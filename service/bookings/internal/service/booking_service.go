@@ -17,8 +17,8 @@ type bookingService struct {
 	lock      lock.DistributedLock
 }
 
-func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient) model.BookingService {
-	return &bookingService{repo: repo, ticketSVC: ticketSvc}
+func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient, lock lock.DistributedLock) model.BookingService {
+	return &bookingService{repo: repo, ticketSVC: ticketSvc, lock: lock}
 }
 
 func (s *bookingService) CreateBooking(ctx context.Context, userID int32, eventID, eventCat int32, seatID, bookType, categoryType string) error {

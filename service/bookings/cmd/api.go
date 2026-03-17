@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"log"
 	"ticket-tix/common/pkg/db"
+	"ticket-tix/common/pkg/lock"
 	"ticket-tix/service/bookings/internal/handler"
 	"ticket-tix/service/bookings/internal/repository"
 	"ticket-tix/service/bookings/internal/service"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -41,9 +43,12 @@ func main() {
 		log.Fatalf("Failed to connect to ticket service: %v", err)
 	}
 
+	redisClient := openRedisConnection("localhost:6379")
+	redLock := lock.NewRedLock(redisClient, redisClient, redisClient)
+
 	ticketClient := ticketRPC.NewTicketServiceClient(ticketConn)
 	repo := repository.NewBookingRepo(bookDB)
-	ticketService := service.NewBookingService(repo, ticketClient)
+	ticketService := service.NewBookingService(repo, ticketClient, redLock)
 	httpHandler := handler.NewHandler(ticketService)
 
 	r := gin.Default()
@@ -78,4 +83,19 @@ func openDBConnection() *sql.DB {
 		log.Fatalf("Failed to ping database: %v", pingErr)
 	}
 	return pg
+}
+
+func openRedisConnection(addr string) *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: "",
+		DB:       0,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := client.Ping(ctx).Err(); err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+	}
+	return client
 }
