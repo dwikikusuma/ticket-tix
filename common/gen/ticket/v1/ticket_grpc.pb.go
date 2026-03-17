@@ -19,19 +19,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TicketService_UpdateTicketStatus_FullMethodName = "/ticket.TicketService/UpdateTicketStatus"
-	TicketService_ValidateTicket_FullMethodName     = "/ticket.TicketService/ValidateTicket"
-	TicketService_ReserveSeat_FullMethodName        = "/ticket.TicketService/ReserveSeat"
-	TicketService_DecreaseTicket_FullMethodName     = "/ticket.TicketService/DecreaseTicket"
-	TicketService_IncreaseTicket_FullMethodName     = "/ticket.TicketService/IncreaseTicket"
+	TicketService_ValidateTicket_FullMethodName = "/ticket.TicketService/ValidateTicket"
+	TicketService_ReserveTicket_FullMethodName  = "/ticket.TicketService/ReserveTicket"
+	TicketService_ReleaseTicket_FullMethodName  = "/ticket.TicketService/ReleaseTicket"
+	TicketService_ReserveSeat_FullMethodName    = "/ticket.TicketService/ReserveSeat"
+	TicketService_DecreaseTicket_FullMethodName = "/ticket.TicketService/DecreaseTicket"
+	TicketService_IncreaseTicket_FullMethodName = "/ticket.TicketService/IncreaseTicket"
 )
 
 // TicketServiceClient is the client API for TicketService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TicketServiceClient interface {
-	UpdateTicketStatus(ctx context.Context, in *UpdateTicketStatusRequest, opts ...grpc.CallOption) (*UpdateTicketStatusResponse, error)
 	ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error)
+	ReserveTicket(ctx context.Context, in *ReserveTicketRequest, opts ...grpc.CallOption) (*ReserveTicketResponse, error)
+	ReleaseTicket(ctx context.Context, in *ReleaseTicketRequest, opts ...grpc.CallOption) (*ReleaseTicketResponse, error)
 	ReserveSeat(ctx context.Context, in *ReserveFlexibleSeatRequest, opts ...grpc.CallOption) (*ReserveFlexibleSeatResponse, error)
 	DecreaseTicket(ctx context.Context, in *DecreaseTicketRequest, opts ...grpc.CallOption) (*DecreaseTicketResponse, error)
 	IncreaseTicket(ctx context.Context, in *IncreaseTicketRequest, opts ...grpc.CallOption) (*IncreaseTicketResponse, error)
@@ -45,20 +47,30 @@ func NewTicketServiceClient(cc grpc.ClientConnInterface) TicketServiceClient {
 	return &ticketServiceClient{cc}
 }
 
-func (c *ticketServiceClient) UpdateTicketStatus(ctx context.Context, in *UpdateTicketStatusRequest, opts ...grpc.CallOption) (*UpdateTicketStatusResponse, error) {
+func (c *ticketServiceClient) ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateTicketStatusResponse)
-	err := c.cc.Invoke(ctx, TicketService_UpdateTicketStatus_FullMethodName, in, out, cOpts...)
+	out := new(ValidateTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_ValidateTicket_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *ticketServiceClient) ValidateTicket(ctx context.Context, in *ValidateTicketRequest, opts ...grpc.CallOption) (*ValidateTicketResponse, error) {
+func (c *ticketServiceClient) ReserveTicket(ctx context.Context, in *ReserveTicketRequest, opts ...grpc.CallOption) (*ReserveTicketResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateTicketResponse)
-	err := c.cc.Invoke(ctx, TicketService_ValidateTicket_FullMethodName, in, out, cOpts...)
+	out := new(ReserveTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_ReserveTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ticketServiceClient) ReleaseTicket(ctx context.Context, in *ReleaseTicketRequest, opts ...grpc.CallOption) (*ReleaseTicketResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseTicketResponse)
+	err := c.cc.Invoke(ctx, TicketService_ReleaseTicket_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +111,9 @@ func (c *ticketServiceClient) IncreaseTicket(ctx context.Context, in *IncreaseTi
 // All implementations must embed UnimplementedTicketServiceServer
 // for forward compatibility.
 type TicketServiceServer interface {
-	UpdateTicketStatus(context.Context, *UpdateTicketStatusRequest) (*UpdateTicketStatusResponse, error)
 	ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error)
+	ReserveTicket(context.Context, *ReserveTicketRequest) (*ReserveTicketResponse, error)
+	ReleaseTicket(context.Context, *ReleaseTicketRequest) (*ReleaseTicketResponse, error)
 	ReserveSeat(context.Context, *ReserveFlexibleSeatRequest) (*ReserveFlexibleSeatResponse, error)
 	DecreaseTicket(context.Context, *DecreaseTicketRequest) (*DecreaseTicketResponse, error)
 	IncreaseTicket(context.Context, *IncreaseTicketRequest) (*IncreaseTicketResponse, error)
@@ -114,11 +127,14 @@ type TicketServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedTicketServiceServer struct{}
 
-func (UnimplementedTicketServiceServer) UpdateTicketStatus(context.Context, *UpdateTicketStatusRequest) (*UpdateTicketStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateTicketStatus not implemented")
-}
 func (UnimplementedTicketServiceServer) ValidateTicket(context.Context, *ValidateTicketRequest) (*ValidateTicketResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateTicket not implemented")
+}
+func (UnimplementedTicketServiceServer) ReserveTicket(context.Context, *ReserveTicketRequest) (*ReserveTicketResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReserveTicket not implemented")
+}
+func (UnimplementedTicketServiceServer) ReleaseTicket(context.Context, *ReleaseTicketRequest) (*ReleaseTicketResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseTicket not implemented")
 }
 func (UnimplementedTicketServiceServer) ReserveSeat(context.Context, *ReserveFlexibleSeatRequest) (*ReserveFlexibleSeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReserveSeat not implemented")
@@ -150,24 +166,6 @@ func RegisterTicketServiceServer(s grpc.ServiceRegistrar, srv TicketServiceServe
 	s.RegisterService(&TicketService_ServiceDesc, srv)
 }
 
-func _TicketService_UpdateTicketStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateTicketStatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TicketServiceServer).UpdateTicketStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: TicketService_UpdateTicketStatus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TicketServiceServer).UpdateTicketStatus(ctx, req.(*UpdateTicketStatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _TicketService_ValidateTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateTicketRequest)
 	if err := dec(in); err != nil {
@@ -182,6 +180,42 @@ func _TicketService_ValidateTicket_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TicketServiceServer).ValidateTicket(ctx, req.(*ValidateTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TicketService_ReserveTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReserveTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServiceServer).ReserveTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketService_ReserveTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServiceServer).ReserveTicket(ctx, req.(*ReserveTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TicketService_ReleaseTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServiceServer).ReleaseTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TicketService_ReleaseTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServiceServer).ReleaseTicket(ctx, req.(*ReleaseTicketRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -248,12 +282,16 @@ var TicketService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TicketServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "UpdateTicketStatus",
-			Handler:    _TicketService_UpdateTicketStatus_Handler,
-		},
-		{
 			MethodName: "ValidateTicket",
 			Handler:    _TicketService_ValidateTicket_Handler,
+		},
+		{
+			MethodName: "ReserveTicket",
+			Handler:    _TicketService_ReserveTicket_Handler,
+		},
+		{
+			MethodName: "ReleaseTicket",
+			Handler:    _TicketService_ReleaseTicket_Handler,
 		},
 		{
 			MethodName: "ReserveSeat",

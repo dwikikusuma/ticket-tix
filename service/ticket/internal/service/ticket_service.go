@@ -269,6 +269,37 @@ func (s *TicketService) ReserveAvailableSeat(ctx context.Context, eventCatID int
 	return seatNum, ticketID, nil
 }
 
+func (s *TicketService) ReserveTicket(ctx context.Context, seatNum string, eventCategoryID int32) (int32, error) {
+	ticket, err := s.repo.GetTicketSeatAndEventCategory(ctx, seatNum, eventCategoryID)
+	if err != nil {
+		return 0, fmt.Errorf("get ticket: %w", err)
+	}
+
+	if ticket.Status != "AVAILABLE" {
+		return 0, fmt.Errorf("seat %s is not available, current status: %s", seatNum, ticket.Status)
+	}
+
+	ticketID, err := s.repo.UpdateTicketStatus(ctx, "RESERVED", seatNum, eventCategoryID)
+	if err != nil {
+		return 0, fmt.Errorf("reserve ticket: %w", err)
+	}
+	return ticketID, nil
+}
+
+func (s *TicketService) ReleaseTicket(ctx context.Context, seatNum string, eventCategoryID int32) error {
+	ticket, err := s.repo.GetTicketSeatAndEventCategory(ctx, seatNum, eventCategoryID)
+	if err != nil {
+		return fmt.Errorf("get ticket: %w", err)
+	}
+
+	if ticket.Status != "RESERVED" {
+		return fmt.Errorf("seat %s is not reserved, cannot release, current status: %s", seatNum, ticket.Status)
+	}
+
+	_, err = s.repo.UpdateTicketStatus(ctx, "AVAILABLE", seatNum, eventCategoryID)
+	return err
+}
+
 func (s *TicketService) insertFiles(ctx context.Context, eventID int32, files []model.FileData) ([]string, error) {
 	filesKey := make([]string, 0, len(files))
 	for _, file := range files {

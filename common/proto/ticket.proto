@@ -1,59 +1,63 @@
 syntax = "proto3";
-
 package ticket;
 option go_package = "github.com/dwikikusuma/ticket-tix/common/gen/ticket/v1;ticketv1";
 
 service TicketService {
-  rpc UpdateTicketStatus (UpdateTicketStatusRequest) returns (UpdateTicketStatusResponse);
-  rpc ValidateTicket (ValidateTicketRequest) returns (ValidateTicketResponse);
-  rpc ReserveSeat (ReserveFlexibleSeatRequest) returns (ReserveFlexibleSeatResponse);
-  rpc DecreaseTicket (DecreaseTicketRequest) returns (DecreaseTicketResponse);
-  rpc IncreaseTicket (IncreaseTicketRequest) returns (IncreaseTicketResponse);
+  rpc ValidateTicket  (ValidateTicketRequest)       returns (ValidateTicketResponse);
+  rpc ReserveTicket   (ReserveTicketRequest)        returns (ReserveTicketResponse);
+  rpc ReleaseTicket   (ReleaseTicketRequest)        returns (ReleaseTicketResponse);
+  rpc ReserveSeat     (ReserveFlexibleSeatRequest)  returns (ReserveFlexibleSeatResponse);
+  rpc DecreaseTicket  (DecreaseTicketRequest)       returns (DecreaseTicketResponse);
+  rpc IncreaseTicket  (IncreaseTicketRequest)       returns (IncreaseTicketResponse);
 }
 
-message UpdateTicketStatusRequest {
-  string seat_id = 1;
-  int32 event_category = 2;
-  string status = 3;
-}
-
-message UpdateTicketStatusResponse {
-  int32 ticket_id = 1;
-  string status = 2;
-}
-
+// --- ValidateTicket ---
 message ValidateTicketRequest {
-  string seat_id = 1;
-  int32 event_id = 2;
-  int32 event_category = 3;
+  string seat_id       = 1;
+  int32  event_id      = 2;
+  int32  event_category = 3;
 }
-
 message ValidateTicketResponse {
   bool is_valid = 1;
 }
 
+// --- ReserveTicket (AVAILABLE → RESERVED) ---
+message ReserveTicketRequest {
+  string seat_id        = 1;
+  int32  event_category = 2;
+}
+message ReserveTicketResponse {
+  int32  ticket_id   = 1;
+  string seat_number = 2;
+}
+
+// --- ReleaseTicket (RESERVED → AVAILABLE) ---
+message ReleaseTicketRequest {
+  string seat_id        = 1;
+  int32  event_category = 2;
+}
+message ReleaseTicketResponse {}
+
+// --- ReserveSeat (FLEXIBLE atomic pick) ---
 message ReserveFlexibleSeatRequest {
   int32 event_category_id = 1;
   int32 event_id          = 2;
 }
-
 message ReserveFlexibleSeatResponse {
-  int32  ticket_id    = 1;
-  string seat_number  = 2;
+  int32  ticket_id   = 1;
+  string seat_number = 2;
 }
 
+// --- DecreaseTicket (STANDING stock) ---
 message DecreaseTicketRequest {
   int32 event_category_id = 1;
-  int64 decrease_by = 2;
+  int64 decrease_by       = 2;
 }
+message DecreaseTicketResponse {}
 
-message DecreaseTicketResponse {
-}
-
+// --- IncreaseTicket (STANDING rollback) ---
 message IncreaseTicketRequest {
   int32 event_category_id = 1;
-  int64 increase_by = 2;
+  int64 increase_by       = 2;
 }
-
-message IncreaseTicketResponse {
-}
+message IncreaseTicketResponse {}

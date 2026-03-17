@@ -29,9 +29,10 @@ type TicketService interface {
 	UploadImg(ctx context.Context, eventID int32, files []FileData) error
 	GetEventDetail(ctx context.Context, id int32) (EventDetailsData, error)
 	BrowseEvents(ctx context.Context, filter BrowseFilter) (BrowseResult, error)
-	UpdateTicketStatus(ctx context.Context, status, seatNum string, eventID int32) (int32, error)
 	ValidateTicketBooking(ctx context.Context, seatId string, eventID, eventCategory int32) error
 	ReserveAvailableSeat(ctx context.Context, eventCatID int32) (string, int32, error)
+	ReserveTicket(ctx context.Context, seatNum string, eventCategoryID int32) (int32, error)
+	ReleaseTicket(ctx context.Context, seatNum string, eventCategoryID int32) error
 }
 
 type ImageKeyData struct {
