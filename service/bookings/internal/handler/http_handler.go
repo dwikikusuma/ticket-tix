@@ -41,7 +41,7 @@ func (h *Handler) CreateBooking(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt32("UserID")
+	userID := c.GetInt32("userID")
 
 	if err := h.service.CreateBooking(
 		c.Request.Context(),

@@ -27,7 +27,7 @@ func (h *Handler) RegisterRoutes(r gin.IRouter) {
 	r.POST("/auth/login", h.Login)
 	r.POST("/auth/refresh", h.RefreshToken)
 
-	auth := r.GET("/user")
+	auth := r.Group("/user")
 	auth.Use(middleware.AuthMiddleware(secretKey, h.redisClient))
 	auth.POST("/logout", h.LogOut)
 }
