@@ -49,7 +49,7 @@ func main() {
 	ticketClient := ticketRPC.NewTicketServiceClient(ticketConn)
 	repo := repository.NewBookingRepo(bookDB)
 	ticketService := service.NewBookingService(repo, ticketClient, redLock)
-	httpHandler := handler.NewHandler(ticketService)
+	httpHandler := handler.NewHandler(ticketService, redisClient)
 
 	r := gin.Default()
 	httpHandler.RegisterRoutes(r)

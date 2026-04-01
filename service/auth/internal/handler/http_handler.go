@@ -2,24 +2,34 @@ package handler
 
 import (
 	"net/http"
+	"ticket-tix/common/pkg/middleware"
 	"ticket-tix/service/auth/internal/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+)
+
+const (
+	secretKey = "sudo-secret-key"
 )
 
 type Handler struct {
-	service model.UserService
+	service     model.UserService
+	redisClient *redis.Client
 }
 
-func NewHandler(service model.UserService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service model.UserService, redisClient *redis.Client) *Handler {
+	return &Handler{service: service, redisClient: redisClient}
 }
 
 func (h *Handler) RegisterRoutes(r gin.IRouter) {
 	r.POST("/auth/register", h.Register)
 	r.POST("/auth/login", h.Login)
 	r.POST("/auth/refresh", h.RefreshToken)
-	r.POST("/auth/logout", h.LogOut)
+
+	auth := r.GET("/user")
+	auth.Use(middleware.AuthMiddleware(secretKey, h.redisClient))
+	auth.POST("/logout", h.LogOut)
 }
 
 func (h *Handler) Login(c *gin.Context) {
