@@ -49,7 +49,11 @@ func (s *userService) RegisterUser(ctx context.Context, email, password string) 
 		return model.User{}, err
 	}
 
-	return s.repo.InsertUser(ctx, email, string(hashPassword))
+	user, err := s.repo.InsertUser(ctx, email, string(hashPassword))
+	if err != nil {
+		return model.User{}, err
+	}
+	return model.User{ID: user.ID, Email: user.Email}, err
 }
 
 func (s *userService) Login(ctx context.Context, email, password string) (model.LoginResponse, error) {
