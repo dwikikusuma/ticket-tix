@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"ticket-tix/common/pkg/db"
+	"ticket-tix/common/pkg/events"
 	"ticket-tix/common/pkg/lock"
 	"ticket-tix/service/bookings/internal/handler"
 	"ticket-tix/service/bookings/internal/repository"
@@ -32,6 +33,9 @@ const (
 
 	// rpc
 	ticketRPCAddr = "localhost:40061"
+
+	// kafka
+	kafkaAddr = "localhost:9092"
 )
 
 func main() {
@@ -48,7 +52,16 @@ func main() {
 
 	ticketClient := ticketRPC.NewTicketServiceClient(ticketConn)
 	repo := repository.NewBookingRepo(bookDB)
-	ticketService := service.NewBookingService(repo, ticketClient, redLock)
+
+	producer, producerErr := events.NewProducer(events.ProducerConfig{
+		Brokers: []string{kafkaAddr},
+	})
+
+	if producerErr != nil {
+		log.Fatalf("Failed to create producer: %v", producerErr)
+	}
+
+	ticketService := service.NewBookingService(repo, ticketClient, redLock, producer)
 	httpHandler := handler.NewHandler(ticketService, redisClient)
 
 	r := gin.Default()

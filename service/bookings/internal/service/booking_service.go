@@ -3,22 +3,29 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	ticketRPC "ticket-tix/common/gen/ticket/v1"
+	"ticket-tix/common/pkg/events"
 	"ticket-tix/common/pkg/lock"
 	"ticket-tix/service/bookings/internal/model"
 	"time"
+)
+
+const (
+	bookingCreatedTopic = "booking.created"
 )
 
 type bookingService struct {
 	repo      model.BookingRepo
 	ticketSVC ticketRPC.TicketServiceClient
 	lock      lock.DistributedLock
+	producer  events.Producer
 }
 
-func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient, lock lock.DistributedLock) model.BookingService {
-	return &bookingService{repo: repo, ticketSVC: ticketSvc, lock: lock}
+func NewBookingService(repo model.BookingRepo, ticketSvc ticketRPC.TicketServiceClient, lock lock.DistributedLock, producer events.Producer) model.BookingService {
+	return &bookingService{repo: repo, ticketSVC: ticketSvc, lock: lock, producer: producer}
 }
 
 func (s *bookingService) CreateBooking(ctx context.Context, userID int32, eventID, eventCat int32, seatID, bookType, categoryType string) error {
@@ -54,30 +61,32 @@ func (s *bookingService) bookSeatedFixed(ctx context.Context, userID, eventID, e
 		return fmt.Errorf("validate ticket: %w", err)
 	}
 
-	reserved, err := s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
+	reserved, err := s.ticketSVC.ReserveTicket(ctx, &ticketRPC.ReserveTicketRequest{
 		SeatId:        seatID,
 		EventCategory: eventCat,
-		Status:        "RESERVED",
 	})
 	if err != nil {
 		return fmt.Errorf("reserve ticket: %w", err)
 	}
 
-	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
+	bookingData, err := s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:   eventID,
 		EventType: eventCat,
 		TicketID:  reserved.GetTicketId(),
-		UserID:    userID, // ← no longer hardcoded
+		UserID:    userID,
 		Status:    "PENDING",
 	})
 	if err != nil {
-		s.ticketSVC.UpdateTicketStatus(ctx, &ticketRPC.UpdateTicketStatusRequest{
+		_, releaseErr := s.ticketSVC.ReleaseTicket(ctx, &ticketRPC.ReleaseTicketRequest{
 			SeatId:        seatID,
 			EventCategory: eventCat,
-			Status:        "AVAILABLE",
 		})
+		if releaseErr != nil {
+			return fmt.Errorf("failed release ticket: %w", err)
+		}
 		return fmt.Errorf("create booking: %w", err)
 	}
+	s.publishBookingCreated(ctx, bookingData, "SEATED-FIXED")
 	return nil
 }
 
@@ -91,7 +100,7 @@ func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID
 		return fmt.Errorf("reserve flexible seat: %w", err)
 	}
 
-	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
+	bookingData, err := s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:    eventID,
 		EventType:  eventCat,
 		TicketID:   resp.GetTicketId(),
@@ -103,6 +112,7 @@ func (s *bookingService) bookSeatedFlexible(ctx context.Context, userID, eventID
 		return fmt.Errorf("create booking after flexible reserve: %w", err)
 	}
 
+	s.publishBookingCreated(ctx, bookingData, "SEATED_FLEXIBLE")
 	return nil
 }
 
@@ -117,7 +127,7 @@ func (s *bookingService) bookStanding(ctx context.Context, userID, eventID, even
 		return fmt.Errorf("decrease standing stock: %w", err)
 	}
 
-	_, err = s.repo.CreateBooking(ctx, model.CreateBooking{
+	bookingData, err := s.repo.CreateBooking(ctx, model.CreateBooking{
 		EventID:   eventID,
 		EventType: eventCat,
 		TicketID:  0,
@@ -129,13 +139,47 @@ func (s *bookingService) bookStanding(ctx context.Context, userID, eventID, even
 			EventCategoryId: eventCat,
 			IncreaseBy:      1,
 		})
-		log.Println("incrErr", incrErr) // implement dlq for failed compensations in production
+		log.Println("incrErr", incrErr)
 		return fmt.Errorf("create standing booking: %w", err)
 	}
 
+	s.publishBookingCreated(ctx, bookingData, "STANDING")
 	return nil
 }
 
 func (s *bookingService) seatLockKey(eventCatID int32, seatID string) string {
 	return fmt.Sprintf("lock:seat:%d:%s", eventCatID, seatID)
+}
+
+func (s *bookingService) publishBookingCreated(ctx context.Context, booking model.CreateBooking, categoryType string) {
+	event := events.BookingCreatedEvent{
+		BookingID:    booking.ID,
+		UserID:       booking.UserID,
+		EventID:      booking.EventID,
+		EventCatID:   booking.EventType,
+		SeatNumber:   booking.SeatNumber,
+		CategoryType: categoryType,
+		OccurredAt:   time.Now(),
+	}
+
+	payload, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("failed to marshal booking event: %v", err)
+		return
+	}
+
+	msg := events.Message{
+		Key:   []byte(booking.ID),
+		Value: payload,
+		Headers: map[string]string{
+			"event-type":     "booking.created",
+			"content-type":   "application/json",
+			"source":         "booking-service",
+			"correlation-id": booking.ID,
+		},
+	}
+
+	if err := s.producer.Publish(ctx, bookingCreatedTopic, msg); err != nil {
+		log.Printf("failed to publish booking.created event: %v", err)
+	}
 }
