@@ -92,8 +92,8 @@ func (h *RPCHandler) ReserveSeat(ctx context.Context, req *ticketRPC.ReserveFlex
 
 func (h *RPCHandler) DecreaseTicket(ctx context.Context, req *ticketRPC.DecreaseTicketRequest) (*ticketRPC.DecreaseTicketResponse, error) {
 	eventCat := req.GetEventCategoryId()
-	decreaseBy := req.GetDecreaseBy()
-	if err := h.stockCounter.Decrement(ctx, eventCat, decreaseBy); err != nil {
+	//decreaseBy := req.GetDecreaseBy()
+	if err := h.stockCounter.Decrement(ctx, eventCat, 1); err != nil {
 		return nil, status.Errorf(codes.ResourceExhausted, "failed to decrease ticket stock: %v", err)
 	}
 	return &ticketRPC.DecreaseTicketResponse{}, nil

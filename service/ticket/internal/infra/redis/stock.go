@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -41,12 +42,14 @@ func (s *StockCounter) Decrement(ctx context.Context, eventID int32, val int64) 
 	remaining, err := s.client.DecrBy(ctx, key, val).Result()
 
 	if err != nil {
-		return fmt.Errorf("decrement stock: %w", err)
+		log.Printf("failed to decrement stock for event %d: %v\n", eventID, err)
+		return fmt.Errorf("decrement stock (%d): %w", remaining, err)
 	}
 
 	if remaining < 0 {
 		s.client.IncrBy(ctx, key, val)
-		return fmt.Errorf("stock not sufficient")
+		log.Printf("stock insufficient for event %d, rolling back decrement. Remaining stock: %d\n", eventID, remaining)
+		return fmt.Errorf("stock not sufficient: (%d)", remaining)
 	}
 
 	return nil

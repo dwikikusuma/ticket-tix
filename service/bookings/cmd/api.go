@@ -29,7 +29,7 @@ const (
 	dbName = "ticket_tix_db"
 
 	// server
-	port = "50062"
+	port = "50063"
 
 	// rpc
 	ticketRPCAddr = "localhost:40061"
@@ -53,9 +53,8 @@ func main() {
 	ticketClient := ticketRPC.NewTicketServiceClient(ticketConn)
 	repo := repository.NewBookingRepo(bookDB)
 
-	producer, producerErr := events.NewProducer(events.ProducerConfig{
-		Brokers: []string{kafkaAddr},
-	})
+	producerConfig := events.GetDefaultConfig([]string{kafkaAddr})
+	producer, producerErr := events.NewProducer(producerConfig)
 
 	if producerErr != nil {
 		log.Fatalf("Failed to create producer: %v", producerErr)

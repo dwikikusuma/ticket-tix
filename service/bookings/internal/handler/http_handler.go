@@ -30,7 +30,10 @@ func (h *Handler) RegisterRoutes(r gin.IRouter) {
 	})
 
 	auth := r.Group("/bookings")
-	auth.Use(middleware.AuthMiddleware(secretKey, h.redisClient))
+	auth.Use(
+		middleware.TimeoutMiddleware(5),
+		middleware.AuthMiddleware(secretKey, h.redisClient),
+	)
 	auth.POST("/create", h.CreateBooking)
 }
 

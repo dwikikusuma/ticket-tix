@@ -36,7 +36,7 @@ const (
 	dbName = "ticket_tix_db"
 
 	// server
-	httpPort = "50061"
+	httpPort = "50062"
 
 	// minio
 	minioEndpoint  = "localhost:9000"

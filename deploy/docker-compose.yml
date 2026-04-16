@@ -97,56 +97,63 @@ services:
       timeout: 3s
       retries: 5
 
+  # --- 3. KAFKA (FIXED KRaft SETUP) ---
   kafka:
     image: bitnamilegacy/kafka:latest
     container_name: ticket_kafka
     hostname: kafka
     ports:
-      - "9092:9092" # External access
+      - "9092:9092"
     environment:
-      # KRaft Settings
       KAFKA_CFG_NODE_ID: 1
       KAFKA_CFG_PROCESS_ROLES: controller,broker
       KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
-      # Listeners
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:9094
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
-
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
 
-      # Persistence & Replication
       KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_ALLOW_PLAINTEXT_LISTENER: "yes"
     volumes:
       - ticket-tix-kafka-data:/bitnami/kafka
     networks:
       - ticket-tix_net
     healthcheck:
-      test: [ "CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1" ]
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: ticket_kafka_ui
     ports:
-      - "8088:8080" # Access at http://localhost:8088
+      - "8088:8080"
     environment:
       DYNAMIC_CONFIG_ENABLED: "true"
       KAFKA_CLUSTERS_0_NAME: ticket_tix_cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9094
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_CLUSTERS_0_PROPERTIES_REQUEST_TIMEOUT_MS: "60000"
+      KAFKA_CLUSTERS_0_PROPERTIES_DEFAULT_API_TIMEOUT_MS: "60000"
+
+      LOGGING_LEVEL_com.provectus.kafka.ui.service: DEBUG
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - ticket-tix_net
+    restart: on-failure
 
-  # This container runs ONCE to create our topics automatically
   init-kafka:
     image: bitnamilegacy/kafka:latest
     container_name: ticket_init_kafka
@@ -155,26 +162,34 @@ services:
         condition: service_healthy
     networks:
       - ticket-tix_net
-    entrypoint: [ "/bin/sh", "-c" ]
     command: >
+      /bin/sh -c "
+      echo 'Waiting for Kafka...' &&
+      until /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do sleep 2; done &&
+      echo 'Creating topics...' &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --create --if-not-exists --topic booking.created --bootstrap-server kafka:9092 --partitions 3 --replication-factor 1 &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --create --if-not-exists --topic booking.created.dlq --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1 &&
+      echo 'SUCCESS: Topics created:' &&
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
       "
-      echo 'Waiting for Kafka...'
-      until kafka-topics.sh --bootstrap-server kafka:9094 --list >/dev/null 2>&1; do
-        echo 'Broker not available yet... waiting 2s'
-        sleep 2
-      done
 
-      echo 'Kafka is UP. Creating TicketRush topics...'
+  # --- 4. OTHER SERVICES ---
 
-      # Core Business Events
-      kafka-topics.sh --create --if-not-exists --topic booking.created    --bootstrap-server kafka:9094 --partitions 3 --replication-factor 1
-      
-      # Analytics & Dead Letter Queues
-      kafka-topics.sh --create --if-not-exists --topic booking.created.dlq        --bootstrap-server kafka:9094 --partitions 1 --replication-factor 1
-
-      echo 'SUCCESS: Topics created.'
-      kafka-topics.sh --bootstrap-server kafka:9094 --list
-      "
+  mongodb:
+    image: mongo:6.0
+    container_name: ticket-tix-mongodb
+    hostname: mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - ticket-tix_net
+    volumes:
+      - ticket-tix-mongodb:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   ticket-tix_net:
@@ -186,3 +201,4 @@ volumes:
   ticket-tix-minio:
   ticket-tix-redis:
   ticket-tix-kafka-data:
+  ticket-tix-mongodb:

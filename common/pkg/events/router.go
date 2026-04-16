@@ -18,7 +18,7 @@ func NewRouter() *Router {
 }
 
 func (r *Router) Handle(topic string, handler MessageHandler, mw ...Middleware) {
-	for i := len(mw); i >= 0; i-- {
+	for i := len(mw) - 1; i >= 0; i-- {
 		handler = mw[i](handler)
 	}
 
