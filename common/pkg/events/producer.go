@@ -78,7 +78,7 @@ func NewProducer(cfg ProducerConfig) (Producer, error) {
 }
 
 func (r *franzKafka) Publish(ctx context.Context, topic string, msg Message) error {
-	kafkaCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	kafkaCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	rec := r.toRecord(topic, msg)

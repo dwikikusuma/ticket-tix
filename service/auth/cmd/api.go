@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"ticket-tix/common/pkg/db"
 	"ticket-tix/service/auth/internal/handler"
@@ -49,18 +48,29 @@ func main() {
 
 	userHandler.RegisterRoutes(r)
 
-	var wg sync.WaitGroup
-	httpServer := spinUpHttpServer(r, &wg)
+	srv := &http.Server{Addr: ":" + httpPort, Handler: r}
+	go func() {
+		log.Println("starting HTTP server on port " + httpPort)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+	}()
 
-	log.Println("all services started")
-	sigChannel := make(chan os.Signal, 1)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	<-ctx.Done()
 
-	signal.Notify(sigChannel, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChannel
+	log.Println("shutdown signal received")
 
-	stopHttpServer(httpServer)
-	wg.Wait()
-	log.Println("all services stopped gracefully")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("HTTP server forced shutdown: %v", err)
+	}
+
+	redisConn.Close()
+	dbConn.Close()
+	log.Println("auth service stopped gracefully")
 }
 
 func openDBConnection() *sql.DB {
@@ -100,33 +110,4 @@ func openRedisConnection() *redis.Client {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	return client
-}
-
-func spinUpHttpServer(r *gin.Engine, wg *sync.WaitGroup) *http.Server {
-	svr := &http.Server{
-		Addr:    ":" + httpPort,
-		Handler: r,
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		log.Println("starting HTTP server on port " + httpPort)
-		if err := svr.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start HTTP server: %v", err)
-		}
-	}()
-	return svr
-}
-
-func stopHttpServer(svr *http.Server) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := svr.Shutdown(ctx); err != nil {
-		log.Println("HTTP server forced to shutdown: %v", err)
-
-	} else {
-		log.Println("HTTP server stopped gracefully")
-	}
 }

@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
 	"ticket-tix/common/pkg/db"
 	"ticket-tix/common/pkg/events"
 	"ticket-tix/common/pkg/lock"
@@ -40,7 +44,6 @@ const (
 
 func main() {
 	bookDB := openDBConnection()
-	defer bookDB.Close()
 
 	ticketConn, err := grpc.NewClient(ticketRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -66,9 +69,50 @@ func main() {
 	r := gin.Default()
 	httpHandler.RegisterRoutes(r)
 
-	if serveErr := r.Run(":" + port); serveErr != nil {
-		log.Fatalf("Failed to start server: %v", serveErr)
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
 	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	<-ctx.Done()
+
+	log.Println("shut down signal received....")
+	log.Println("shutting down HTTP server...")
+
+	shutDownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutDownCtx); err != nil {
+		log.Printf("HTTP server graceful shutdown failed: %v", err)
+		if closeErr := srv.Close(); closeErr != nil {
+			log.Printf("HTTP server force close failed: %v", closeErr)
+		}
+	}
+
+	producer.Close()
+
+	if err := ticketConn.Close(); err != nil {
+		log.Printf("Ticket gRPC connection close failed: %v", err)
+	}
+
+	if err := redisClient.Close(); err != nil {
+		log.Printf("Redis connection close failed: %v", err)
+	}
+
+	if err := bookDB.Close(); err != nil {
+		log.Printf("DB connection close failed: %v", err)
+	}
+
+	log.Println("booking service stopped..")
+
 }
 
 func openDBConnection() *sql.DB {

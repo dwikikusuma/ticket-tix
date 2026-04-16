@@ -74,5 +74,7 @@ func main() {
 		logger.Error("consumer exited with error", "err", err)
 		os.Exit(1)
 	}
+
+	consumer.Close()
 	logger.Info("fulfillment service stopped gracefully")
 }
